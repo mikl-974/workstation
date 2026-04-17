@@ -1,7 +1,7 @@
 { pkgs, ... }:
 {
   imports = [
-    ./editors.nix
+    ../modules/apps/editors.nix
   ];
 
   environment.systemPackages = with pkgs; [

@@ -22,10 +22,10 @@ Règle stricte :
 Briques actuellement consommées depuis `foundation` :
 
 - `foundation.nixosModules.networkingTailscale` — module Tailscale
-- `foundation.devShells.<system>.dotnet` — shell .NET
 
 Briques restant dans `workstation` :
 
+- devShell `.NET` : environnement de dev personnel (Docker, IDE) — pas une brique générique
 - Hyprland et la base desktop : spécifique machines utilisateur
 - Cloudflare WARP : client VPN desktop, pas une primitive infra
 - theming, dotfiles, profils desktop, configuration utilisateur
@@ -36,7 +36,7 @@ Briques restant dans `workstation` :
 2. chaque host importe un ou plusieurs `profiles/`
 3. les profils assemblent des `modules/` ciblés et des briques `foundation`
 4. les dotfiles restent découplés dans `dotfiles/`
-5. les environnements de dev sont consommés depuis `foundation` ou étendus localement
+5. les environnements de dev sont définis localement dans `devshells/` (spécifiques au poste de travail)
 
 ## Évolution multi-machines
 

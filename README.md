@@ -1,67 +1,57 @@
 # workstation
 
-Repository dédié aux machines utilisateur personnelles (NixOS desktop, Hyprland, dotfiles, devShells), séparé du scope `homelab`.
+Repository dedie aux machines utilisateur personnelles (NixOS desktop, Hyprland, dotfiles, devShells), separe du scope `homelab`.
 
-## Dépendance partagée : `foundation`
+## Dependance partagee : `foundation`
 
-Ce repo consomme [`mikl-974/foundation`](https://github.com/mikl-974/foundation) comme socle partagé.
+Ce repo consomme [`mikl-974/foundation`](https://github.com/mikl-974/foundation) comme socle partage.
 
-Briques consommées depuis `foundation` :
+Briques consommees depuis `foundation` :
 
 | Brique | Source | Raison |
 |---|---|---|
-| Tailscale | `foundation.nixosModules.networkingTailscale` | réseau générique, partagé entre machines |
+| Tailscale | `foundation.nixosModules.networkingTailscale` | reseau generique, partage entre machines |
 
-Briques conservées dans `workstation` :
+Briques conservees dans `workstation` :
 
 | Brique | Raison |
 |---|---|
-| devShell `.NET` | environnement de dev personnel (Docker, IDE) — pas une brique générique |
-| Hyprland + base desktop | spécifique machines utilisateur |
-| Cloudflare WARP | client VPN desktop, pas une primitive infra générique |
+| devShell `.NET` | environnement de dev personnel (Docker, IDE, playwright) — pas une brique generique |
+| Noctalia | theme et identite visuelle du poste — strictement personnel |
+| Hyprland + base desktop | specifique machines utilisateur |
+| Cloudflare WARP | client VPN desktop, pas une primitive infra generique |
 | theming / dotfiles | strictement desktop / utilisateur |
 
 ## Structure
 
-- `hosts/` : définition des machines concrètes (`main`, `laptop`, `gaming`)
-- `profiles/` : assemblages réutilisables (`desktop-hyprland`, `dev`, `gaming`, `networking`)
-- `modules/` : modules Nix ciblés par domaine (`desktop/`, `apps/`, `shell/`, `theming/`)
-- `devshells/` : environnements de développement locaux (spécifiques au poste)
-- `home/` : base Home Manager
-- `dotfiles/` : configurations applicatives versionnées
+- `hosts/` : definition des machines concretes (`main`, `laptop`, `gaming`)
+- `profiles/` : assemblages reutilisables (`desktop-hyprland`, `dev`, `gaming`, `networking`)
+- `modules/` : modules Nix cibles par domaine (`desktop/`, `theming/`, `apps/`, `shell/`)
+- `devshells/` : environnements de developpement locaux (specifiques au poste)
+- `home/` : configuration Home Manager utilisateur (dotfiles, programmes)
+- `dotfiles/` : configurations applicatives brutes (`hypr/`, `foot/`, `wofi/`, `noctalia/`, `editors/`)
 - `docs/` : documentation d'architecture et d'usage
-- `flake.nix` : point d'entrée unique
+- `flake.nix` : point d'entree unique
 
-## Séparation des responsabilités
+## Separation des responsabilites
 
-- **host** : identité machine + combinaison de profils
+- **host** : identite machine + combinaison de profils
 - **profile** : composition de briques fonctionnelles
-- **module** : logique Nix isolée et réutilisable
-- **dotfiles** : configuration applicative versionnée
-- **devShell** : outillage dev local, spécifique au poste de travail
+- **module** : logique Nix isolee et reutilisable
+- **home** : configuration utilisateur (Home Manager)
+- **dotfiles** : configuration applicative brute (configs INI, CSS, conf)
+- **devShell** : outillage dev local, specifique au poste de travail
 
-## Base Hyprland minimale
+## Theming : Noctalia
 
-La base desktop est portée par `profiles/desktop-hyprland.nix` via `modules/desktop/` et inclut :
+Noctalia est le schema de couleurs et l'identite visuelle de cette workstation.
 
-- Hyprland + XWayland
-- session de login via `greetd` + `tuigreet`
-- xdg-desktop-portal (Hyprland)
-- PipeWire + RTKit
-- polkit
-- NetworkManager
-- Cloudflare WARP (`modules/desktop/warp.nix`)
-- terminal (`foot`)
-- launcher (`wofi`)
-- outils Wayland de base (`waybar`, `wl-clipboard`, `grim`, `slurp`)
+Le module systeme est dans `modules/theming/noctalia.nix`.
+Les assets visuels (palette, CSS, wallpapers) vivent dans `dotfiles/noctalia/`.
 
-## Réseau : Tailscale via `foundation`
+Voir `docs/theming.md`.
 
-Tailscale est activé via `profiles/networking.nix` en consommant le module `foundation.nixosModules.networkingTailscale`.
-
-Ce profil est importé par tous les hosts (`main`, `laptop`, `gaming`).
-
-## DevShell .NET (local)
+## DevShell .NET
 
 Entrer dans le shell :
 
@@ -69,14 +59,23 @@ Entrer dans le shell :
 nix develop .#dotnet
 ```
 
-Le shell `.NET` est défini localement dans `devshells/dotnet.nix`.
-Il représente l'environnement de développement personnel du poste.
-Il n'est pas consommé depuis `foundation` — ce n'est pas une brique générique.
+Contenu : `dotnet-sdk`, `git`, `curl`, `jq`, `openssl`, `pkg-config`, `docker-client`, `playwright`, `vscode`.
+Rider et WebStorm sont prepares (commentes) dans `devshells/dotnet.nix`.
 
-Contenu : `dotnet-sdk`, `git`, `curl`, `jq`, `openssl`, `pkg-config`, `docker-client`.
+Voir `docs/devshells.md`.
+
+## Installation via NixOS Anywhere
+
+La machine `main` est prete a etre installee via NixOS Anywhere :
+
+```bash
+nix run nixpkgs#nixos-anywhere -- --flake .#main root@<IP-CIBLE>
+```
+
+Voir `docs/nixos-anywhere.md` et `docs/bootstrap.md`.
 
 ## Hosts
 
-- `main` : base desktop + profil dev + réseau (Tailscale + WARP)
-- `laptop` : base desktop + profil dev + réseau
-- `gaming` : base desktop + profil gaming + réseau
+- `main` : base desktop + profil dev + reseau (Tailscale + WARP)
+- `laptop` : base desktop + profil dev + reseau
+- `gaming` : base desktop + profil gaming + reseau

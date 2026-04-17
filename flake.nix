@@ -8,9 +8,23 @@
       url = "github:mikl-974/foundation";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Declarative disk partitioning — required for NixOS Anywhere installations.
+    # See docs/nixos-anywhere.md and hosts/main/disko.nix.
+    disko = {
+      url = "github:nix-community/disko";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # Home Manager — manages user dotfiles and per-user packages.
+    # Pinned to the matching NixOS release branch.
+    home-manager = {
+      url = "github:nix-community/home-manager/release-24.11";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { nixpkgs, foundation, ... }:
+  outputs = { nixpkgs, foundation, disko, home-manager, ... }:
     let
       lib = nixpkgs.lib;
       systems = [ "x86_64-linux" ];
@@ -18,13 +32,25 @@
       # Foundation NixOS modules consumed by all workstation hosts.
       sharedModules = [
         foundation.nixosModules.networkingTailscale
+        home-manager.nixosModules.home-manager
+        {
+          # Global home-manager settings applied to all hosts.
+          # useGlobalPkgs avoids a second nixpkgs eval per user.
+          home-manager.useGlobalPkgs = true;
+          home-manager.useUserPackages = true;
+          # Replace "user" with the actual username before nixos-rebuild.
+          home-manager.users.user = import ./home/default.nix;
+        }
       ];
     in
     {
       nixosConfigurations = {
         main = lib.nixosSystem {
           system = "x86_64-linux";
-          modules = sharedModules ++ [ ./hosts/main/default.nix ];
+          modules = sharedModules ++ [
+            disko.nixosModules.disko
+            ./hosts/main/default.nix
+          ];
         };
 
         laptop = lib.nixosSystem {

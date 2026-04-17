@@ -2,13 +2,13 @@
 
 ## Philosophie
 
-Les devShells de `workstation` sont locaux et orientés poste de travail personnel.
+Les devShells de `workstation` sont locaux et orientes poste de travail personnel.
 
-Règle de séparation :
-- `foundation` — shells génériques et partagés (outillage serveur, CI, scripts infra)
-- `workstation` — shells de productivité développeur, spécifiques au poste utilisateur
+Regle de separation :
+- `foundation` — shells generiques et partages (outillage serveur, CI, scripts infra)
+- `workstation` — shells de productivite developpeur, specifiques au poste utilisateur
 
-Un shell qui dépend d'un IDE, de Docker Desktop, ou de tooling personnel n'a pas sa place dans `foundation`.
+Un shell qui depend d'un IDE, de Docker Desktop, ou de tooling personnel n'a pas sa place dans `foundation`.
 
 ## Shell .NET — `devShells.dotnet`
 
@@ -18,45 +18,66 @@ Commande :
 nix develop .#dotnet
 ```
 
-Définition : `devshells/dotnet.nix`.
+Definition : `devshells/dotnet.nix`.
 
-Ce shell est **local à `workstation`**. Il n'est pas consommé depuis `foundation` et ne doit pas y migrer.
+Ce shell est **local a `workstation`**. Il n'est pas consomme depuis `foundation` et ne doit pas y migrer.
 
-Contenu actuel :
+### Contenu
 
-- `dotnet-sdk`
-- `git`
-- `curl`
-- `jq`
-- `openssl`
-- `pkg-config`
-- `docker-client`
+| Outil | Role |
+|---|---|
+| `dotnet-sdk` | SDK .NET — compilation, tests, publish |
+| `git` | Version control |
+| `curl` | HTTP client |
+| `jq` | JSON processing |
+| `openssl` | TLS / PKI |
+| `pkg-config` | Resolution de dependances natives |
+| `docker-client` | Docker CLI (daemon gere par le systeme hote) |
+| `playwright` | Automatisation navigateur / tests E2E |
+| `vscode` | Editeur de code |
 
-Vocation : environnement de développement principal du poste. À terme, ce shell accueillera Rider, WebStorm, et les outils de dev web/local si nécessaire.
+### Rider et WebStorm
 
-## Étendre le shell .NET
-
-Ajouter des outils dans `devshells/dotnet.nix` directement, dans la liste `packages`.
-
-Exemples d'extensions futures :
+Rider et WebStorm sont prepares dans `devshells/dotnet.nix` sous forme de lignes commentees :
 
 ```nix
-jetbrains.rider
-jetbrains.webstorm
+# jetbrains.rider
+# jetbrains.webstorm
+```
+
+Pour les activer, decommenter dans `devshells/dotnet.nix`. Les deux packages sont disponibles dans nixpkgs.
+
+## Pourquoi ce shell est local a `workstation`
+
+Ce shell contient des outils de productivite personnelle (IDE, Docker, browser testing) qui n'ont aucune valeur dans un contexte serveur ou CI generique. Ils appartiennent au poste de travail, pas au socle partage.
+
+`foundation` ne doit pas connaitre les besoins d'un poste de dev personnel.
+
+## Etendre le shell
+
+Ajouter des outils dans `devshells/dotnet.nix`, section `packages`.
+
+Exemples d'extensions :
+
+```nix
 nodejs
+nodePackages.npm
+caddy
+mkcert
+httpie
 ```
 
 ## Ajouter un nouveau devShell
 
-1. Créer `devshells/<nom>.nix`
+1. Creer `devshells/<nom>.nix`
 2. L'exposer dans `flake.nix` via `devShells.<system>.<nom>`
 3. Documenter son usage dans ce fichier
 
 ## Quand passer un shell dans `foundation`
 
 Uniquement si le shell est :
-- générique (pas de tooling utilisateur ou IDE)
+- generique (pas de tooling utilisateur ou IDE)
 - utile sur des machines serveur ou CI
-- stable et clairement délimité
+- stable et clairement delimite
 
-Un shell de productivité personnelle reste dans `workstation`.
+Un shell de productivite personnelle reste dans `workstation`.

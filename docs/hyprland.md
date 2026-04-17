@@ -2,7 +2,7 @@
 
 ## Localisation
 
-La base desktop Hyprland est organisée ainsi :
+La base desktop Hyprland est organisee ainsi :
 
 - profil : `profiles/desktop-hyprland.nix`
 - modules :
@@ -12,6 +12,7 @@ La base desktop Hyprland est organisée ainsi :
   - `modules/desktop/portals.nix`
   - `modules/desktop/fonts.nix`
   - `modules/desktop/warp.nix`
+- theming : `modules/theming/noctalia.nix`
 
 ## Composition actuelle
 
@@ -24,28 +25,40 @@ La base inclut :
 - polkit
 - NetworkManager
 - Cloudflare WARP
+- Noctalia (theme systeme)
 - terminal (`foot`)
 - launcher (`wofi`)
 - outils Wayland minimaux (`waybar`, `wl-clipboard`, `grim`, `slurp`)
 
-Tailscale est activé via `profiles/networking.nix` (module `foundation`), pas depuis le profil desktop.
+Tailscale est active via `profiles/networking.nix` (module `foundation`), pas depuis le profil desktop.
 
 ## Ce qui n'est volontairement pas inclus
 
-- aucun rice/thème lourd
-- aucune surcharge visuelle
-- aucune logique utilisateur cachée
-- Tailscale n'est pas dans ce profil (il vient de `foundation` via `profiles/networking.nix`)
+- logique utilisateur cachee
+- Tailscale (il vient de `foundation` via `profiles/networking.nix`)
+
+## Noctalia
+
+Noctalia est active dans `profiles/desktop-hyprland.nix` via :
+
+```nix
+workstation.theming.noctalia.enable = true;
+```
+
+Le module systeme (`modules/theming/noctalia.nix`) installe les packages GTK/curseur et definit les variables d'environnement.
+La personnalisation visuelle (couleurs, CSS, wallpapers) vit dans `dotfiles/noctalia/`.
+
+Voir `docs/theming.md` pour les details.
 
 ## Cloudflare WARP
 
-WARP est géré dans `modules/desktop/warp.nix` et activé via `profiles/desktop-hyprland.nix`.
+WARP est gere dans `modules/desktop/warp.nix` et active via `profiles/desktop-hyprland.nix`.
 
-Il reste dans `workstation` parce que c'est un client VPN desktop (interface utilisateur), pas une primitive réseau serveur. Le module `foundation.networking.cloudflared` (tunnel daemon) est une brique différente et distincte.
+Il reste dans `workstation` parce que c'est un client VPN desktop (interface utilisateur), pas une primitive reseau serveur. Le module `foundation.networking.cloudflared` (tunnel daemon) est une brique differente et distincte.
 
-## Étendre proprement
+## Etendre proprement
 
 - ajouter la logique desktop commune dans `modules/desktop/`
-- garder les choix machine-spécifiques dans `hosts/`
-- déplacer la personnalisation utilisateur dans `dotfiles/` + `home/`
-- ne pas ajouter de logique réseau ici — utiliser `profiles/networking.nix`
+- garder les choix machine-specifiques dans `hosts/`
+- deplacer la personnalisation utilisateur dans `dotfiles/` + `home/`
+- ne pas ajouter de logique reseau ici — utiliser `profiles/networking.nix`

@@ -68,7 +68,8 @@ Depuis la machine hôte : `ssh root@<IP-CIBLE>`
 
 ### Option A — Utiliser disko (recommandé si disko.nix est disponible)
 
-La machine `main` dispose d'un `hosts/main/disko.nix` qui déclare le layout disque complet :
+La machine `main` dispose d'un `hosts/main/disko.nix` qui déclare le layout disque complet.
+Le disque cible est lu depuis `hosts/main/vars.nix` (champ `disk`).
 
 - Partition EFI 512 MiB
 - Partition btrfs couvrant le reste, avec subvolumes :
@@ -77,17 +78,7 @@ La machine `main` dispose d'un `hosts/main/disko.nix` qui déclare le layout dis
   - `@nix` → `/nix`
   - `@var-log` → `/var/log`
 
-**Avant de lancer disko, vérifier le disque cible** :
-
-```bash
-lsblk
-```
-
-Ouvrir `hosts/main/disko.nix` et remplacer `/dev/CHANGEME` par le disque réel :
-
-```nix
-device = "/dev/nvme0n1";  # exemple
-```
+**S'assurer que `vars.nix` est configuré avant de lancer disko** (voir étape 6 ci-dessous).
 
 Lancer disko :
 
@@ -175,48 +166,39 @@ cd /root/workstation
 
 ---
 
-## 6. Préparation de la configuration
+## 6. Préparer la configuration machine
 
-Avant l'installation, vérifier et compléter les valeurs critiques.
+**C'est le seul fichier à éditer.** Toutes les valeurs spécifiques à la machine sont centralisées dans `hosts/<name>/vars.nix`.
 
-### 6a. Disque cible (si pas déjà fait via disko)
-
-Dans `hosts/main/disko.nix` :
-
-```nix
-device = "/dev/nvme0n1";  # remplacer /dev/CHANGEME par le disque réel
-```
-
-### 6b. Username
-
-Dans `flake.nix`, remplacer `CHANGEME_USERNAME` par le nom d'utilisateur réel :
-
-```nix
-home-manager.users.mikl = import ./home/default.nix;
-```
-
-### 6c. Définition de l'utilisateur dans le host
-
-Dans `hosts/main/default.nix`, ajouter la définition de l'utilisateur si elle n'est pas encore présente :
-
-```nix
-users.users.mikl = {
-  isNormalUser = true;
-  extraGroups = [ "wheel" "docker" "networkmanager" "video" "audio" ];
-  # Optionnel — clé SSH pour accès post-install :
-  openssh.authorizedKeys.keys = [
-    "ssh-ed25519 AAAA... ma-cle-publique"
-  ];
-};
-```
-
-### 6d. Valider la configuration
+### Option A — Initialisation interactive
 
 ```bash
-./scripts/validate-install.sh main
+nix run .#init-host -- main
 ```
 
-Ce script détecte les placeholders restants, les fichiers manquants, et les incohérences.
+Ce script pose les questions et génère `hosts/main/vars.nix`.
+
+### Option B — Édition directe
+
+Ouvrir `hosts/main/vars.nix` et renseigner les valeurs :
+
+```nix
+{
+  username = "mikl";           # nom d'utilisateur système
+  hostname = "main";           # doit correspondre à la clé nixosConfigurations
+  disk     = "/dev/nvme0n1";   # vérifier avec lsblk sur la machine cible
+  timezone = "Europe/Paris";
+  locale   = "fr_FR.UTF-8";
+}
+```
+
+### Valider la configuration
+
+```bash
+nix run .#validate-install -- main
+```
+
+Ce script vérifie que `vars.nix` est complet, que tous les fichiers critiques existent, et qu'aucun placeholder ne subsiste dans les fichiers structurants.
 
 ---
 
@@ -253,7 +235,7 @@ Retirer la clé USB avant le redémarrage.
 
 Au premier boot, NixOS est opérationnel. Home Manager est intégré dans le système via `home-manager.nixosModules.home-manager` — il s'applique automatiquement lors de `nixos-rebuild switch`.
 
-Se connecter avec l'utilisateur défini, puis vérifier :
+Se connecter avec l'utilisateur défini dans `vars.nix`, puis vérifier :
 
 ```bash
 # Vérifier que le système est bien le bon
@@ -348,9 +330,10 @@ nixos-rebuild switch --flake github:mikl-974/workstation#main \
 | Connexion Wi-Fi | `wpa_supplicant -B -i wlan0 -c <(wpa_passphrase SSID PASS)` |
 | SSH live | `systemctl start sshd && passwd root` |
 | Disques | `lsblk` |
+| Initialiser vars.nix | `nix run .#init-host -- main` |
 | Partitionnement disko | `nix run github:nix-community/disko -- --mode disko hosts/main/disko.nix` |
 | Clone repo | `git clone https://github.com/mikl-974/workstation` |
-| Validation pré-install | `./scripts/validate-install.sh main` |
+| Validation pré-install | `nix run .#validate-install -- main` |
 | Installation | `nixos-install --flake /root/workstation#main --root /mnt` |
 | Rebuild | `sudo nixos-rebuild switch --flake .#main` |
 | Post-install check | `nix run .#post-install-check` |

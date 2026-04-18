@@ -13,17 +13,20 @@ Pour les détails, voir `docs/manual-install.md` ou `docs/nixos-anywhere.md`.
 - [ ] `hosts/<hostname>/default.nix` existe
 - [ ] `hosts/<hostname>/disko.nix` existe (requis pour NixOS Anywhere et recommandé en manuel)
 
-### Disque
+### Configuration machine (vars.nix)
 
-- [ ] Disque cible identifié sur la machine (`lsblk`)
-- [ ] Disque confirmé dans `hosts/<hostname>/disko.nix` — `/dev/CHANGEME` remplacé par le vrai device
-- [ ] Taille du disque compatible avec le layout déclaré
+- [ ] `hosts/<hostname>/vars.nix` existe — initialiser avec `nix run .#init-host -- <hostname>` si absent
+- [ ] `username` défini (identifiant Unix valide)
+- [ ] `hostname` défini (correspond à la clé nixosConfigurations dans flake.nix)
+- [ ] `disk` défini si disko.nix est présent — vérifier avec `lsblk` sur la machine cible
+- [ ] `timezone` défini
+- [ ] `locale` défini
+- [ ] Aucun champ avec valeur `DEFINE_*` restant dans vars.nix
 
-### Utilisateur
+### Validation
 
-- [ ] Username défini dans `flake.nix` — `CHANGEME_USERNAME` remplacé
-- [ ] `users.users.<username>` défini dans `hosts/<hostname>/default.nix`
-- [ ] Groupes corrects (`wheel`, `docker`, `networkmanager`, `video`, `audio`)
+- [ ] `nix run .#validate-install -- <hostname>` exécuté sans erreur bloquante
+- [ ] Aucun placeholder dans les fichiers structurants (flake.nix, default.nix, disko.nix)
 
 ### Secrets / accès
 
@@ -34,11 +37,6 @@ Pour les détails, voir `docs/manual-install.md` ou `docs/nixos-anywhere.md`.
 
 - [ ] Accès réseau disponible sur la machine cible
 - [ ] IP de la machine cible connue (parcours NixOS Anywhere)
-
-### Validation
-
-- [ ] `./scripts/validate-install.sh <hostname>` exécuté sans erreur bloquante
-- [ ] Aucun placeholder `CHANGEME` restant dans les fichiers Nix
 
 ---
 
@@ -74,7 +72,7 @@ Pour les détails, voir `docs/manual-install.md` ou `docs/nixos-anywhere.md`.
 
 ### Premier boot
 
-- [ ] Connexion SSH ou login console avec l'utilisateur défini
+- [ ] Connexion SSH ou login console avec l'utilisateur défini dans vars.nix
 - [ ] `sudo nixos-rebuild switch --flake .#<hostname>` si rebuild nécessaire
 
 ### Home Manager / Dotfiles
@@ -96,8 +94,8 @@ Pour les détails, voir `docs/manual-install.md` ou `docs/nixos-anywhere.md`.
 
 | Symptôme | Piste |
 |---|---|
-| Placeholder restant | Relancer `./scripts/validate-install.sh <hostname>` |
-| Rebuild échoue | Vérifier les erreurs Nix, corriger `hosts/` ou `flake.nix` |
-| Home Manager non appliqué | Vérifier que le username dans `flake.nix` correspond à l'utilisateur système |
+| Champ DEFINE_ restant | Compléter `hosts/<hostname>/vars.nix`, relancer `nix run .#validate-install -- <hostname>` |
+| Rebuild échoue | Vérifier les erreurs Nix, corriger `hosts/<hostname>/vars.nix` ou `hosts/` |
+| Home Manager non appliqué | Vérifier que le username dans `vars.nix` correspond à l'utilisateur système |
 | Dotfiles absents | Vérifier `home/default.nix` — les entrées doivent pointer vers des fichiers existants |
 | Service manquant | Vérifier que le profil correspondant est importé dans `hosts/<hostname>/default.nix` |

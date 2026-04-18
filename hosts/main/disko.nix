@@ -1,6 +1,6 @@
 # Disk layout for the main workstation — used by NixOS Anywhere.
 #
-# BEFORE INSTALLING: replace "/dev/CHANGEME" below with the actual disk device.
+# The target disk is read from hosts/main/vars.nix (field: disk).
 # Run `lsblk` on the target machine to identify the correct device.
 # Examples: /dev/nvme0n1, /dev/sda, /dev/vda
 #
@@ -13,17 +13,15 @@
 #           ├─ @var-log    → /var/log
 #           └─ @snapshots  → /snapshots (btrfs snapshots, not mounted by default)
 #
-# Replace "/dev/sda" with the actual target disk before running NixOS Anywhere.
 # See docs/nixos-anywhere.md for the full install procedure.
+{ hostVars, ... }:
 {
   disko.devices = {
     disk = {
       main = {
         type = "disk";
-        # IMPORTANT: replace with the actual target disk before running NixOS Anywhere.
-        # Use `lsblk` on the target machine to identify the correct device.
-        # Examples: /dev/nvme0n1, /dev/sda, /dev/vda
-        device = "/dev/CHANGEME";
+        # Disk device read from hosts/main/vars.nix — set the `disk` field there.
+        device = hostVars.disk;
         content = {
           type = "gpt";
           partitions = {

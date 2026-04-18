@@ -73,6 +73,12 @@ fi
 echo ""
 echo "── Fichiers critiques du host"
 
+if [[ -f "$HOST_DIR/vars.nix" ]]; then
+  ok "hosts/$HOST/vars.nix existe"
+else
+  fail "hosts/$HOST/vars.nix manquant — initialiser avec : nix run .#init-host -- $HOST"
+fi
+
 if [[ -f "$HOST_DIR/default.nix" ]]; then
   ok "hosts/$HOST/default.nix existe"
 else
@@ -95,76 +101,123 @@ fi
 echo ""
 echo "── Exposition du host dans flake.nix"
 
-if grep -q "\"$HOST\"" "$REPO_ROOT/flake.nix" || grep -q "$HOST = lib.nixosSystem" "$REPO_ROOT/flake.nix"; then
+if grep -q "\"$HOST\"" "$REPO_ROOT/flake.nix" || grep -q "$HOST = mkHost" "$REPO_ROOT/flake.nix"; then
   ok "flake.nix expose nixosConfigurations.$HOST"
 else
   fail "flake.nix n'expose pas nixosConfigurations.$HOST"
 fi
 
 # ---------------------------------------------------------------------------
-# 4. Placeholders CHANGEME
+# 4. Lecture de vars.nix
 # ---------------------------------------------------------------------------
 
 echo ""
-echo "── Placeholders CHANGEME"
+echo "── Valeurs dans vars.nix"
 
-CHANGEME_FILES=()
-while IFS= read -r line; do
-  CHANGEME_FILES+=("$line")
-done < <(grep -rl "CHANGEME" "$REPO_ROOT" \
-  --include="*.nix" --include="*.sh" --include="*.md" \
-  --exclude-dir=".git" 2>/dev/null || true)
+VARS_FILE="$HOST_DIR/vars.nix"
+read_var() {
+  grep -oP "${1}\s*=\s*\"\K[^\"]+" "$VARS_FILE" 2>/dev/null | head -1 || echo ""
+}
 
-if [[ ${#CHANGEME_FILES[@]} -eq 0 ]]; then
-  ok "Aucun placeholder CHANGEME détecté"
-else
-  for f in "${CHANGEME_FILES[@]}"; do
-    rel="${f#"$REPO_ROOT/"}"
-    # Afficher les lignes concernées
-    while IFS= read -r match; do
-      fail "Placeholder CHANGEME dans $rel : $match"
-    done < <(grep -n "CHANGEME" "$f")
-  done
-fi
+if [[ -f "$VARS_FILE" ]]; then
+  USERNAME=$(read_var "username")
+  HOSTNAME_VAL=$(read_var "hostname")
+  DISK=$(read_var "disk")
+  TIMEZONE=$(read_var "timezone")
+  LOCALE=$(read_var "locale")
 
-# ---------------------------------------------------------------------------
-# 5. Disque cible dans disko.nix
-# ---------------------------------------------------------------------------
-
-echo ""
-echo "── Disque cible (disko.nix)"
-
-if [[ "$HAS_DISKO" == true ]]; then
-  if grep -q "/dev/CHANGEME" "$HOST_DIR/disko.nix"; then
-    fail "disko.nix contient encore '/dev/CHANGEME' — remplace par le disque réel (ex: /dev/nvme0n1)"
+  # username
+  if [[ -z "$USERNAME" ]]; then
+    fail "vars.nix : champ 'username' absent"
+  elif echo "$USERNAME" | grep -qE '^DEFINE_'; then
+    fail "vars.nix : username non défini ('$USERNAME') — remplacer par le nom d'utilisateur réel"
   else
-    DISK=$(grep -oP 'device\s*=\s*"\K[^"]+' "$HOST_DIR/disko.nix" | head -1)
-    if [[ -n "$DISK" ]]; then
-      ok "Disque cible défini dans disko.nix : $DISK"
+    ok "username : $USERNAME"
+  fi
+
+  # hostname
+  if [[ -z "$HOSTNAME_VAL" ]]; then
+    fail "vars.nix : champ 'hostname' absent"
+  elif echo "$HOSTNAME_VAL" | grep -qE '^DEFINE_'; then
+    fail "vars.nix : hostname non défini ('$HOSTNAME_VAL')"
+  else
+    ok "hostname : $HOSTNAME_VAL"
+  fi
+
+  # disk (uniquement si disko.nix est présent)
+  if [[ "$HAS_DISKO" == true ]]; then
+    if [[ -z "$DISK" ]]; then
+      fail "vars.nix : champ 'disk' absent — requis pour disko.nix"
+    elif echo "$DISK" | grep -qE 'DEFINE_DISK|/dev/DEFINE'; then
+      fail "vars.nix : disk non défini ('$DISK') — lancer 'lsblk' sur la cible et définir le disque réel"
     else
-      warn "Impossible de lire le disque cible dans disko.nix — vérifie manuellement"
+      ok "disk : $DISK"
     fi
   fi
+
+  # timezone
+  if [[ -z "$TIMEZONE" ]]; then
+    warn "vars.nix : champ 'timezone' absent — valeur par défaut NixOS sera utilisée"
+  elif echo "$TIMEZONE" | grep -qE '^DEFINE_'; then
+    fail "vars.nix : timezone non défini ('$TIMEZONE')"
+  else
+    ok "timezone : $TIMEZONE"
+  fi
+
+  # locale
+  if [[ -z "$LOCALE" ]]; then
+    warn "vars.nix : champ 'locale' absent — valeur par défaut NixOS sera utilisée"
+  elif echo "$LOCALE" | grep -qE '^DEFINE_'; then
+    fail "vars.nix : locale non défini ('$LOCALE')"
+  else
+    ok "locale : $LOCALE"
+  fi
 else
-  warn "Pas de disko.nix — vérification du disque ignorée"
+  fail "vars.nix manquant — impossible de vérifier les valeurs"
 fi
 
 # ---------------------------------------------------------------------------
-# 6. Username dans flake.nix
+# 5. Cohérence hostname
 # ---------------------------------------------------------------------------
 
 echo ""
-echo "── Username Home Manager (flake.nix)"
+echo "── Cohérence hostname"
 
-if grep -q "CHANGEME_USERNAME" "$REPO_ROOT/flake.nix"; then
-  fail "flake.nix contient encore 'CHANGEME_USERNAME' — remplace par le nom d'utilisateur réel"
-else
-  USERNAME=$(grep -oP 'home-manager\.users\.\K[a-zA-Z0-9_-]+' "$REPO_ROOT/flake.nix" | head -1)
-  if [[ -n "$USERNAME" ]]; then
-    ok "Username Home Manager défini : $USERNAME"
-  else
-    warn "Impossible de détecter le username dans flake.nix — vérifie manuellement"
+if [[ -n "${HOSTNAME_VAL:-}" && "$HOSTNAME_VAL" != "$HOST" ]]; then
+  warn "vars.nix : hostname='$HOSTNAME_VAL' diffère de la clé host '$HOST'"
+  warn "Le hostname doit correspondre à la clé nixosConfigurations dans flake.nix"
+elif [[ -n "${HOSTNAME_VAL:-}" ]]; then
+  ok "hostname cohérent avec la clé host"
+fi
+
+# ---------------------------------------------------------------------------
+# 6. Absence de placeholders DEFINE_ dans les fichiers structurants
+# ---------------------------------------------------------------------------
+
+echo ""
+echo "── Absence de placeholders dans les fichiers structurants"
+
+STRUCTURAL_FILES=(
+  "$REPO_ROOT/flake.nix"
+  "$HOST_DIR/default.nix"
+  "$HOST_DIR/disko.nix"
+)
+
+FOUND_IN_STRUCTURAL=0
+for f in "${STRUCTURAL_FILES[@]}"; do
+  if [[ -f "$f" ]]; then
+    rel="${f#"$REPO_ROOT/"}"
+    if grep -q "DEFINE_\|CHANGEME" "$f" 2>/dev/null; then
+      while IFS= read -r match; do
+        fail "Placeholder dans fichier structurant $rel : $match"
+        FOUND_IN_STRUCTURAL=$(( FOUND_IN_STRUCTURAL + 1 ))
+      done < <(grep -n "DEFINE_\|CHANGEME" "$f")
+    fi
   fi
+done
+
+if [[ $FOUND_IN_STRUCTURAL -eq 0 ]]; then
+  ok "Aucun placeholder dans les fichiers structurants"
 fi
 
 # ---------------------------------------------------------------------------
@@ -225,6 +278,8 @@ elif [[ $ERRORS -eq 0 ]]; then
 else
   echo -e "${RED}✘ Validation échouée : $ERRORS erreur(s) bloquante(s), $WARNINGS avertissement(s).${RST}"
   echo -e "  Corrige les erreurs ci-dessus avant de lancer l'installation."
+  echo ""
+  echo -e "  Pour re-initialiser la config : nix run .#init-host -- $HOST"
   exit 1
 fi
 

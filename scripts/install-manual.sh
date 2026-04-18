@@ -125,14 +125,14 @@ pause
 step "3/9" "Partitionnement et formatage"
 
 if [[ -f "$HOST_DIR/disko.nix" ]]; then
-  DISK=$(grep -oP 'device\s*=\s*"\K[^"]+' "$HOST_DIR/disko.nix" 2>/dev/null | head -1 || echo "NON DÉFINI")
+  DISK=$(grep -oP 'disk\s*=\s*"\K[^"]+' "$HOST_DIR/vars.nix" 2>/dev/null | head -1 || echo "NON DÉFINI")
   echo "  disko.nix disponible pour ce host."
-  echo "  Disque configuré dans hosts/$HOST/disko.nix : $DISK"
+  echo "  Disque configuré dans hosts/$HOST/vars.nix : $DISK"
   echo ""
-  if [[ "$DISK" == "/dev/CHANGEME" || "$DISK" == "NON DÉFINI" ]]; then
-    echo -e "  ${YLW}⚠ Le disque n'est pas encore défini dans disko.nix.${RST}"
+  if echo "$DISK" | grep -qE 'DEFINE_DISK|NON DÉFINI'; then
+    echo -e "  ${YLW}⚠ Le disque n'est pas encore défini dans hosts/$HOST/vars.nix.${RST}"
     echo "  Sur la machine cible : lsblk"
-    echo "  Puis éditer hosts/$HOST/disko.nix et remplacer /dev/CHANGEME"
+    echo "  Puis définir le champ 'disk' dans hosts/$HOST/vars.nix"
     echo ""
   fi
   echo "  Option A — utiliser disko pour partitionner automatiquement :"
@@ -218,19 +218,18 @@ pause
 
 step "7/9" "Installation NixOS via le flake"
 
-USERNAME=$(grep -oP 'home-manager\.users\.\K[a-zA-Z0-9_-]+' "$REPO_ROOT/flake.nix" | head -1 || echo "CHANGEME_USERNAME")
+USERNAME=$(grep -oP 'username\s*=\s*"\K[^"]+' "$HOST_DIR/vars.nix" 2>/dev/null | head -1 || echo "DEFINE_USERNAME")
 
 echo "  Depuis le répertoire du repo cloné :"
 echo ""
 echo "    cd /root/workstation   # ou l'emplacement du clone"
 echo "    nixos-install --flake .#$HOST --root /mnt"
 echo ""
-echo "  Username défini dans flake.nix : $USERNAME"
+echo "  Username défini dans hosts/$HOST/vars.nix : $USERNAME"
 echo ""
 echo -e "  ${YLW}⚠ Avant de lancer nixos-install :${RST}"
-echo "   • disko.nix : disque correct ?"
-echo "   • flake.nix : CHANGEME_USERNAME remplacé par le vrai username ?"
-echo "   • hosts/$HOST/default.nix : users.users.$USERNAME défini ?"
+echo "   • hosts/$HOST/vars.nix : tous les champs sont-ils définis ?"
+echo "   • Valider : nix run .#validate-install -- $HOST"
 
 pause
 

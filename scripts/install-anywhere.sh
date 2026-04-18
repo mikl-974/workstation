@@ -133,8 +133,8 @@ echo ""
 echo -e "${BLD}── Étape 4/5 : Points à vérifier avant de continuer${RST}"
 echo ""
 
-DISK=$(grep -oP 'device\s*=\s*"\K[^"]+' "$REPO_ROOT/hosts/$HOST/disko.nix" 2>/dev/null | head -1 || echo "inconnu")
-USERNAME=$(grep -oP 'home-manager\.users\.\K[a-zA-Z0-9_-]+' "$REPO_ROOT/flake.nix" | head -1 || echo "inconnu")
+DISK=$(grep -oP 'disk\s*=\s*"\K[^"]+' "$REPO_ROOT/hosts/$HOST/vars.nix" 2>/dev/null | head -1 || echo "inconnu")
+USERNAME=$(grep -oP 'username\s*=\s*"\K[^"]+' "$REPO_ROOT/hosts/$HOST/vars.nix" 2>/dev/null | head -1 || echo "inconnu")
 
 echo -e "  Disque cible configuré dans disko.nix : ${BLD}$DISK${RST}"
 echo -e "  Username Home Manager dans flake.nix  : ${BLD}$USERNAME${RST}"

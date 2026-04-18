@@ -30,6 +30,7 @@
       systems = [ "x86_64-linux" ];
 
       # Foundation NixOS modules consumed by all workstation hosts.
+      # Home Manager user binding is per-host (username lives in hosts/<name>/vars.nix).
       sharedModules = [
         foundation.nixosModules.networkingTailscale
         home-manager.nixosModules.home-manager
@@ -38,30 +39,38 @@
           # useGlobalPkgs avoids a second nixpkgs eval per user.
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
-          # TODO: replace "CHANGEME_USERNAME" with the actual system username
-          # before running nixos-rebuild or nixos-anywhere.
-          home-manager.users.CHANGEME_USERNAME = import ./home/default.nix;
         }
       ];
+
+      # Build a NixOS host from its vars.nix and host-specific modules.
+      # vars   — attrset imported from hosts/<name>/vars.nix
+      # modules — list of NixOS modules specific to the host
+      mkHost = { vars, modules }:
+        lib.nixosSystem {
+          system = "x86_64-linux";
+          # hostVars is available to every module in this host as a function argument.
+          specialArgs = { hostVars = vars; };
+          modules = sharedModules ++ [
+            # Bind the Home Manager config to the username declared in vars.nix.
+            { home-manager.users.${vars.username} = import ./home/default.nix; }
+          ] ++ modules;
+        };
     in
     {
       nixosConfigurations = {
-        main = lib.nixosSystem {
-          system = "x86_64-linux";
-          modules = sharedModules ++ [
-            disko.nixosModules.disko
-            ./hosts/main/default.nix
-          ];
+        main = mkHost {
+          vars   = import ./hosts/main/vars.nix;
+          modules = [ disko.nixosModules.disko ./hosts/main/default.nix ];
         };
 
-        laptop = lib.nixosSystem {
-          system = "x86_64-linux";
-          modules = sharedModules ++ [ ./hosts/laptop/default.nix ];
+        laptop = mkHost {
+          vars   = import ./hosts/laptop/vars.nix;
+          modules = [ ./hosts/laptop/default.nix ];
         };
 
-        gaming = lib.nixosSystem {
-          system = "x86_64-linux";
-          modules = sharedModules ++ [ ./hosts/gaming/default.nix ];
+        gaming = mkHost {
+          vars   = import ./hosts/gaming/vars.nix;
+          modules = [ ./hosts/gaming/default.nix ];
         };
       };
 
@@ -84,9 +93,11 @@
               program = "${pkgs.writeShellScript (builtins.baseNameOf script) (builtins.readFile script)}";
             };
         in {
-          validate-install  = mkApp ./scripts/validate-install.sh;
-          install-anywhere  = mkApp ./scripts/install-anywhere.sh;
-          install-manual    = mkApp ./scripts/install-manual.sh;
+          init-host          = mkApp ./scripts/init-host.sh;
+          show-config        = mkApp ./scripts/show-config.sh;
+          validate-install   = mkApp ./scripts/validate-install.sh;
+          install-anywhere   = mkApp ./scripts/install-anywhere.sh;
+          install-manual     = mkApp ./scripts/install-manual.sh;
           post-install-check = mkApp ./scripts/post-install-check.sh;
         }
       );

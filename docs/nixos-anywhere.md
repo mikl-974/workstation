@@ -21,47 +21,46 @@ Sur la machine cible :
 
 ## Préparer la configuration
 
-Avant l'installation, les valeurs suivantes doivent être définies. Utiliser le validateur pour tout vérifier d'un coup :
+Les variables spécifiques à la machine sont centralisées dans `hosts/<name>/vars.nix`.
+**C'est le seul fichier à éditer avant d'installer.**
+
+### 1. Initialiser la config machine
+
+```bash
+nix run .#init-host -- main
+```
+
+Ce script interactif crée `hosts/main/vars.nix` avec :
+- username (identifiant Unix de l'utilisateur)
+- hostname (doit correspondre à la clé dans flake.nix)
+- disk (device cible — lancer `lsblk` sur la machine pour l'identifier)
+- timezone
+- locale
+
+Ou éditer directement `hosts/main/vars.nix` :
+
+```nix
+{
+  username = "mikl";
+  hostname = "main";
+  disk     = "/dev/nvme0n1";  # identifier avec lsblk sur la machine cible
+  timezone = "Europe/Paris";
+  locale   = "fr_FR.UTF-8";
+}
+```
+
+### 2. Vérifier la configuration
 
 ```bash
 nix run .#validate-install -- main
 ```
 
-### 1. Définir le disque cible
+Ce script vérifie que `vars.nix` est complet, que les fichiers critiques existent, et qu'aucun placeholder n'est resté dans les fichiers structurants.
 
-Ouvrir `hosts/main/disko.nix` et remplacer `/dev/CHANGEME` par le disque réel de la machine cible :
+### 3. Afficher un résumé de la config effective
 
-```nix
-device = "/dev/nvme0n1";  # exemple pour un NVMe
-```
-
-Vérifier le disque cible sur la machine : `lsblk`
-
-### 2. Définir l'utilisateur
-
-Dans `flake.nix`, remplacer `CHANGEME_USERNAME` par le nom d'utilisateur réel :
-
-```nix
-home-manager.users.mikl = import ./home/default.nix;
-```
-
-Ajouter la définition de l'utilisateur dans `hosts/main/default.nix` si elle n'existe pas encore :
-
-```nix
-users.users.mikl = {
-  isNormalUser = true;
-  extraGroups = [ "wheel" "docker" "networkmanager" "video" "audio" ];
-};
-```
-
-### 3. Ajouter une clé SSH autorisée (recommandé)
-
-Dans `hosts/main/default.nix` ou un profil :
-
-```nix
-users.users.mikl.openssh.authorizedKeys.keys = [
-  "ssh-ed25519 AAAA... cle-publique"
-];
+```bash
+nix run .#show-config -- main
 ```
 
 ## Lancer l'installation
@@ -83,7 +82,7 @@ nix run nixpkgs#nixos-anywhere -- \
 ```
 
 NixOS Anywhere va :
-1. Partitionner et formater les disques selon `disko.nix`
+1. Partitionner et formater les disques selon `disko.nix` (en lisant le disque depuis `vars.nix`)
 2. Monter les partitions
 3. Générer la configuration hardware
 4. Installer NixOS
@@ -117,12 +116,14 @@ sudo nixos-rebuild switch --flake github:mikl-974/workstation#main
 ## Structure des fichiers pertinents
 
 ```
+hosts/main/vars.nix     variables machine (username, disk, timezone…) — seul fichier à éditer
 flake.nix               inputs disko + home-manager, nixosConfigurations.main, apps
-hosts/main/default.nix  configuration du host (boot, hostname, profils)
-hosts/main/disko.nix    layout disque (GPT + EFI + btrfs avec subvolumes)
+hosts/main/default.nix  configuration du host (boot, hostname, profils, utilisateur)
+hosts/main/disko.nix    layout disque (GPT + EFI + btrfs) — lit le disque depuis vars.nix
 profiles/               profils assemblés par le host
 modules/                modules Nix
 home/default.nix        configuration Home Manager (dotfiles, programmes)
 dotfiles/               fichiers de configuration bruts
-scripts/                validate-install, install-anywhere, post-install-check
+scripts/                init-host, show-config, validate-install, install-anywhere, post-install-check
+templates/host-vars.nix template de vars.nix pour un nouveau host
 ```

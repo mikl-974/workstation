@@ -14,16 +14,17 @@ Checklist opératoire : `docs/install-checklist.md`
 Parcours NixOS Anywhere
 ─────────────────────────────────────────────────────────────
 1. Machine cible bootée sur live ISO NixOS (SSH actif)
-2. Valider la configuration : nix run .#validate-install -- main
-3. Lancer : nix run .#install-anywhere -- main <IP-CIBLE>
-4. Premier boot : NixOS opérationnel, Home Manager actif
-5. Vérifier : nix run .#post-install-check
+2. Initialiser la config : nix run .#init-host -- main
+3. Valider : nix run .#validate-install -- main
+4. Lancer : nix run .#install-anywhere -- main <IP-CIBLE>
+5. Premier boot : NixOS opérationnel, Home Manager actif
+6. Vérifier : nix run .#post-install-check
 
 Parcours Manuel
 ─────────────────────────────────────────────────────────────
 1. Boot sur ISO NixOS
 2. Préparer le réseau, partitionner, monter
-3. Cloner le repo, valider la configuration
+3. Cloner le repo, initialiser vars.nix, valider
 4. nixos-install --flake .#main --root /mnt
 5. Reboot
 6. Vérifier : nix run .#post-install-check
@@ -40,21 +41,47 @@ git clone https://github.com/mikl-974/workstation
 cd workstation
 ```
 
-### 2. Adapter la configuration
+### 2. Configurer la machine
 
-Avant l'installation, vérifier / ajuster :
+Toutes les valeurs spécifiques à la machine sont dans `hosts/<name>/vars.nix`.
+**C'est le seul fichier à renseigner.**
 
-| Fichier | Ce qu'il faut vérifier |
-|---|---|
-| `hosts/main/disko.nix` | Remplacer `/dev/CHANGEME` par le disque réel |
-| `flake.nix` | Remplacer `CHANGEME_USERNAME` par le nom d'utilisateur |
-| `hosts/main/default.nix` | Ajouter la définition utilisateur, les clés SSH |
+```bash
+# Initialiser vars.nix interactivement
+nix run .#init-host -- main
+```
 
-Valider d'un coup :
+Ou éditer directement `hosts/main/vars.nix` :
+
+```nix
+{
+  username = "mikl";           # nom d'utilisateur système
+  hostname = "main";           # doit correspondre à la clé nixosConfigurations
+  disk     = "/dev/nvme0n1";   # vérifier avec lsblk sur la machine cible
+  timezone = "Europe/Paris";
+  locale   = "fr_FR.UTF-8";
+}
+```
+
+Ces valeurs sont lues automatiquement par :
+- `flake.nix` → username pour Home Manager
+- `hosts/main/default.nix` → hostname, timezone, locale, définition utilisateur
+- `hosts/main/disko.nix` → disque cible
+
+Aucun autre fichier n'est à modifier.
+
+### 3. Valider la configuration
 
 ```bash
 nix run .#validate-install -- main
 ```
+
+Vérifications effectuées :
+- `vars.nix` existe et tous les champs obligatoires sont définis
+- Aucun placeholder `DEFINE_` dans les fichiers structurants
+- Fichiers critiques présents (`default.nix`, `disko.nix`)
+- `flake.nix` expose bien le host
+- `home/default.nix` présent
 
 ### 3a. Installer via NixOS Anywhere
 
@@ -77,7 +104,7 @@ Voir `docs/manual-install.md` pour la procédure complète.
 
 Les dotfiles sont gérés par Home Manager, intégré dans le système NixOS.
 
-**Lors de `nixos-rebuild switch`**, Home Manager s'applique automatiquement pour l'utilisateur défini dans `flake.nix`. Les symlinks dans `~/.config/` sont créés ou mis à jour.
+**Lors de `nixos-rebuild switch`**, Home Manager s'applique automatiquement pour l'utilisateur défini dans `vars.nix`. Les symlinks dans `~/.config/` sont créés ou mis à jour.
 
 Ajouter un dotfile :
 1. Placer le fichier dans `dotfiles/<app>/`
@@ -135,16 +162,18 @@ nixos-rebuild switch --flake github:mikl-974/workstation#main \
 
 ## Ajouter une nouvelle machine
 
-1. Créer `hosts/<name>/default.nix` et `hosts/<name>/disko.nix`
-2. Ajouter la configuration dans `flake.nix` :
+1. Créer `hosts/<name>/default.nix` (copier depuis un host existant et adapter)
+2. Créer `hosts/<name>/disko.nix` si le host utilise disko
+3. Initialiser la config :
+   ```bash
+   nix run .#init-host -- <name>
+   ```
+4. Ajouter la configuration dans `flake.nix` :
    ```nix
-   <name> = lib.nixosSystem {
-     system = "x86_64-linux";
-     modules = sharedModules ++ [
-       disko.nixosModules.disko
-       ./hosts/<name>/default.nix
-     ];
+   <name> = mkHost {
+     vars    = import ./hosts/<name>/vars.nix;
+     modules = [ disko.nixosModules.disko ./hosts/<name>/default.nix ];
    };
    ```
-3. Valider : `nix run .#validate-install -- <name>`
-4. Installer via NixOS Anywhere : `nix run .#install-anywhere -- <name> <IP-CIBLE>`
+5. Valider : `nix run .#validate-install -- <name>`
+6. Installer via NixOS Anywhere : `nix run .#install-anywhere -- <name> <IP-CIBLE>`

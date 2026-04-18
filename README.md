@@ -37,7 +37,7 @@ Le shell `.NET` fournit les runtimes et outils CLI avec lesquels ces editeurs tr
 
 ## Structure
 
-- `hosts/` : definition des machines concretes (`main`, `laptop`, `gaming`)
+- `hosts/` : definition des machines concretes (`main`, `laptop`, `gaming`) — chaque machine a un `vars.nix`
 - `profiles/` : assemblages reutilisables (`desktop-hyprland`, `dev`, `gaming`, `networking`)
 - `modules/` : modules Nix cibles par domaine (`desktop/`, `theming/`, `apps/`, `shell/`)
 - `devshells/` : environnements de developpement CLI locaux (specifiques au poste)
@@ -45,11 +45,30 @@ Le shell `.NET` fournit les runtimes et outils CLI avec lesquels ces editeurs tr
 - `dotfiles/` : configurations applicatives brutes (`hypr/`, `foot/`, `wofi/`, `noctalia/`, `editors/`)
 - `docs/` : documentation d'architecture et d'usage
 - `scripts/` : orchestration, validation, vérification (ne redefinissent pas la configuration)
+- `templates/` : templates de configuration (host-vars.nix)
 - `flake.nix` : point d'entree unique
+
+## Configuration machine (vars.nix)
+
+Chaque machine est configurée via `hosts/<name>/vars.nix`.
+**C'est le seul fichier à éditer pour configurer une machine.**
+Les fichiers structurants (`flake.nix`, `default.nix`, `disko.nix`) lisent leurs valeurs depuis ce fichier.
+
+```nix
+# hosts/main/vars.nix
+{
+  username = "mikl";
+  hostname = "main";
+  disk     = "/dev/nvme0n1";
+  timezone = "Europe/Paris";
+  locale   = "fr_FR.UTF-8";
+}
+```
 
 ## Separation des responsabilites
 
 - **host** : identite machine + combinaison de profils
+- **vars.nix** : valeurs spécifiques à l'instance machine (username, disk, timezone…)
 - **profile** : composition de briques fonctionnelles
 - **module** : logique Nix isolee et reutilisable
 - **home** : configuration utilisateur (Home Manager)
@@ -79,31 +98,49 @@ Les IDEs (VS Code, Rider, WebStorm) sont installes comme paquets systeme, pas da
 
 Voir `docs/devshells.md`.
 
-## Installation via NixOS Anywhere
+## Installer une machine
 
-La machine `main` est prête à être installée via NixOS Anywhere :
+### 1. Initialiser la configuration machine
 
 ```bash
-# Avec le script d'orchestration (recommandé)
+# Crée hosts/main/vars.nix interactivement
+nix run .#init-host -- main
+```
+
+Ou copier le template et éditer directement :
+
+```bash
+cp templates/host-vars.nix hosts/main/vars.nix
+# éditer hosts/main/vars.nix
+```
+
+### 2. Valider la configuration
+
+```bash
+nix run .#validate-install -- main
+```
+
+### 3. Afficher la config effective
+
+```bash
+nix run .#show-config -- main
+```
+
+### 4. Installer
+
+**Via NixOS Anywhere (recommandé)** :
+
+```bash
 nix run .#install-anywhere -- main <IP-CIBLE>
-
-# Ou directement
-nix run nixpkgs#nixos-anywhere -- --flake .#main root@<IP-CIBLE>
 ```
 
-Voir `docs/nixos-anywhere.md` et `docs/bootstrap.md`.
-
-## Installation manuelle
-
-Pour installer depuis un live ISO NixOS sans NixOS Anywhere :
+**Installation manuelle** :
 
 ```bash
-# Guide interactif
 nix run .#install-manual -- --host main
-
-# Ou suivre la procédure complète
-# docs/manual-install.md
 ```
+
+Voir `docs/nixos-anywhere.md`, `docs/manual-install.md` et `docs/bootstrap.md`.
 
 ## Validation et vérification
 

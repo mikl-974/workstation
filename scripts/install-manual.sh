@@ -140,8 +140,9 @@ if [[ -f "$HOST_DIR/disko.nix" ]]; then
   echo ""
   echo "  Option B — partitionnement manuel (voir docs/manual-install.md pour le détail) :"
   echo "    gdisk /dev/$DISK     # créer les partitions GPT + EFI"
-  echo "    mkfs.vfat /dev/${DISK}1"
-  echo "    mkfs.btrfs /dev/${DISK}2"
+  echo "    # Nommage partitions : /dev/${DISK}p1 et /dev/${DISK}p2 (NVMe) ou /dev/${DISK}1 et /dev/${DISK}2 (SATA/virtio)"
+  echo "    mkfs.vfat <partition1>   # ex: /dev/${DISK}p1 ou /dev/${DISK}1"
+  echo "    mkfs.btrfs <partition2>  # ex: /dev/${DISK}p2 ou /dev/${DISK}2"
   echo "    # créer les subvolumes btrfs et monter"
 else
   echo "  Pas de disko.nix pour ce host — partitionnement entièrement manuel."

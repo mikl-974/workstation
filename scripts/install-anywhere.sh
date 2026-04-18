@@ -111,7 +111,7 @@ echo -e "${BLD}── Étape 3/5 : Vérification de la connectivité SSH${RST}"
 echo ""
 
 echo "  Test SSH vers root@$TARGET_IP ..."
-if ssh -o ConnectTimeout=10 -o BatchMode=yes -o StrictHostKeyChecking=no \
+if ssh -o ConnectTimeout=10 -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
        "root@$TARGET_IP" "echo OK" &>/dev/null; then
   echo -e "  ${GRN}✔${RST}  SSH root@$TARGET_IP accessible"
 else

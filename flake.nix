@@ -27,7 +27,7 @@
   outputs = { nixpkgs, foundation, disko, home-manager, ... }:
     let
       lib = nixpkgs.lib;
-      systems = [ "x86_64-linux" ];
+      systems = [ "x86_64-linux" "aarch64-darwin" "x86_64-darwin" ];
 
       # Foundation NixOS modules consumed by all workstation hosts.
       # Home Manager user binding is per-host (username lives in hosts/<name>/vars.nix).

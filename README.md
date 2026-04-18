@@ -44,6 +44,7 @@ Le shell `.NET` fournit les runtimes et outils CLI avec lesquels ces editeurs tr
 - `home/` : configuration Home Manager utilisateur (dotfiles, programmes)
 - `dotfiles/` : configurations applicatives brutes (`hypr/`, `foot/`, `wofi/`, `noctalia/`, `editors/`)
 - `docs/` : documentation d'architecture et d'usage
+- `scripts/` : orchestration, validation, vérification (ne redefinissent pas la configuration)
 - `flake.nix` : point d'entree unique
 
 ## Separation des responsabilites
@@ -80,13 +81,45 @@ Voir `docs/devshells.md`.
 
 ## Installation via NixOS Anywhere
 
-La machine `main` est prete a etre installee via NixOS Anywhere :
+La machine `main` est prête à être installée via NixOS Anywhere :
 
 ```bash
+# Avec le script d'orchestration (recommandé)
+nix run .#install-anywhere -- main <IP-CIBLE>
+
+# Ou directement
 nix run nixpkgs#nixos-anywhere -- --flake .#main root@<IP-CIBLE>
 ```
 
 Voir `docs/nixos-anywhere.md` et `docs/bootstrap.md`.
+
+## Installation manuelle
+
+Pour installer depuis un live ISO NixOS sans NixOS Anywhere :
+
+```bash
+# Guide interactif
+nix run .#install-manual -- --host main
+
+# Ou suivre la procédure complète
+# docs/manual-install.md
+```
+
+## Validation et vérification
+
+Avant l'installation :
+
+```bash
+nix run .#validate-install -- main
+```
+
+Après l'installation :
+
+```bash
+nix run .#post-install-check
+```
+
+Checklist opératoire : `docs/install-checklist.md`
 
 ## Hosts
 

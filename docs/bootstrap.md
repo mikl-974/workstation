@@ -1,24 +1,39 @@
 # Bootstrap — installation et mise en place de la workstation
 
-Ce document decrit le parcours complet : de la machine vierge a la workstation pleinement configuree.
+Ce document décrit le parcours complet : de la machine vierge à la workstation pleinement configurée.
+
+Deux parcours sont disponibles :
+- **NixOS Anywhere** (recommandé) : installation à distance depuis la machine hôte → `docs/nixos-anywhere.md`
+- **Manuel** (fallback) : installation depuis un live ISO NixOS → `docs/manual-install.md`
+
+Checklist opératoire : `docs/install-checklist.md`
 
 ## Vue d'ensemble
 
 ```
-1. Machine cible bootee sur live ISO NixOS
-2. NixOS Anywhere installe le systeme + partitionne les disques
-3. Premier boot : NixOS est operationnel
-4. Home Manager s'applique automatiquement (dotfiles, paquets utilisateur)
-5. Machine prete
+Parcours NixOS Anywhere
+─────────────────────────────────────────────────────────────
+1. Machine cible bootée sur live ISO NixOS (SSH actif)
+2. Valider la configuration : nix run .#validate-install -- main
+3. Lancer : nix run .#install-anywhere -- main <IP-CIBLE>
+4. Premier boot : NixOS opérationnel, Home Manager actif
+5. Vérifier : nix run .#post-install-check
+
+Parcours Manuel
+─────────────────────────────────────────────────────────────
+1. Boot sur ISO NixOS
+2. Préparer le réseau, partitionner, monter
+3. Cloner le repo, valider la configuration
+4. nixos-install --flake .#main --root /mnt
+5. Reboot
+6. Vérifier : nix run .#post-install-check
 ```
 
-Voir `docs/nixos-anywhere.md` pour les details de l'etape 2.
+## Étapes détaillées
 
-## Etapes detaillees
+### 1. Préparer le repo
 
-### 1. Preparer le repo
-
-Cloner le repo sur la machine hote :
+Cloner le repo sur la machine hôte :
 
 ```bash
 git clone https://github.com/mikl-974/workstation
@@ -27,29 +42,42 @@ cd workstation
 
 ### 2. Adapter la configuration
 
-Avant l'installation, verifier / ajuster :
+Avant l'installation, vérifier / ajuster :
 
-| Fichier | Ce qu'il faut verifier |
+| Fichier | Ce qu'il faut vérifier |
 |---|---|
-| `hosts/main/disko.nix` | Remplacer `/dev/sda` par le disque reel |
-| `flake.nix` | Remplacer `"user"` par le nom d'utilisateur |
-| `hosts/main/default.nix` | Ajouter la definition utilisateur, les cles SSH |
+| `hosts/main/disko.nix` | Remplacer `/dev/CHANGEME` par le disque réel |
+| `flake.nix` | Remplacer `CHANGEME_USERNAME` par le nom d'utilisateur |
+| `hosts/main/default.nix` | Ajouter la définition utilisateur, les clés SSH |
 
-### 3. Installer via NixOS Anywhere
+Valider d'un coup :
 
 ```bash
-nix run nixpkgs#nixos-anywhere -- \
-  --flake .#main \
-  root@<IP-CIBLE>
+nix run .#validate-install -- main
 ```
 
-Le systeme est installe et la machine redemmarre.
+### 3a. Installer via NixOS Anywhere
 
-### 4. Dotfiles — comment ils sont appliques
+```bash
+nix run .#install-anywhere -- main <IP-CIBLE>
+```
 
-Les dotfiles sont geres par Home Manager, integre dans le systeme NixOS.
+Le système est installé et la machine redémarre.
 
-**Lors de `nixos-rebuild switch`**, Home Manager s'applique automatiquement pour l'utilisateur defini dans `flake.nix`. Les symlinks dans `~/.config/` sont crees ou mis a jour.
+### 3b. Installer manuellement
+
+```bash
+nix run .#install-manual -- --host main
+```
+
+Ce guide interactif accompagne le parcours manuel étape par étape.
+Voir `docs/manual-install.md` pour la procédure complète.
+
+### 4. Dotfiles — comment ils sont appliqués
+
+Les dotfiles sont gérés par Home Manager, intégré dans le système NixOS.
+
+**Lors de `nixos-rebuild switch`**, Home Manager s'applique automatiquement pour l'utilisateur défini dans `flake.nix`. Les symlinks dans `~/.config/` sont créés ou mis à jour.
 
 Ajouter un dotfile :
 1. Placer le fichier dans `dotfiles/<app>/`
@@ -59,7 +87,7 @@ Ajouter un dotfile :
    ```
 3. Rebuilder : `sudo nixos-rebuild switch --flake .#main`
 
-### 5. Shell de developpement
+### 5. Shell de développement
 
 Entrer dans le devShell .NET :
 
@@ -67,32 +95,38 @@ Entrer dans le devShell .NET :
 nix develop .#dotnet
 ```
 
-### 6. Verifier l'installation
+### 6. Vérifier l'installation
 
 ```bash
-# Verifier que Hyprland est disponible
+nix run .#post-install-check
+```
+
+Ou manuellement :
+
+```bash
+# Vérifier que Hyprland est disponible
 which Hyprland
 
-# Verifier que Tailscale est actif
+# Vérifier que Tailscale est actif
 systemctl status tailscaled
 
-# Verifier que WARP est actif
+# Vérifier que WARP est actif
 systemctl status warp-svc
 
-# Verifier les dotfiles Home Manager
+# Vérifier les dotfiles Home Manager
 ls -la ~/.config/hypr/
 ls -la ~/.config/foot/
 ```
 
 ## Reconstruire la machine
 
-Apres une modification du repo :
+Après une modification du repo :
 
 ```bash
 sudo nixos-rebuild switch --flake .#main
 ```
 
-Ou a distance :
+Ou à distance :
 
 ```bash
 nixos-rebuild switch --flake github:mikl-974/workstation#main \
@@ -101,7 +135,7 @@ nixos-rebuild switch --flake github:mikl-974/workstation#main \
 
 ## Ajouter une nouvelle machine
 
-1. Creer `hosts/<name>/default.nix` et `hosts/<name>/disko.nix`
+1. Créer `hosts/<name>/default.nix` et `hosts/<name>/disko.nix`
 2. Ajouter la configuration dans `flake.nix` :
    ```nix
    <name> = lib.nixosSystem {
@@ -112,4 +146,5 @@ nixos-rebuild switch --flake github:mikl-974/workstation#main \
      ];
    };
    ```
-3. Installer via NixOS Anywhere avec `--flake .#<name>`
+3. Valider : `nix run .#validate-install -- <name>`
+4. Installer via NixOS Anywhere : `nix run .#install-anywhere -- <name> <IP-CIBLE>`

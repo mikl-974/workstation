@@ -73,5 +73,22 @@
           dotnet = import ./devshells/dotnet.nix { inherit pkgs; };
         }
       );
+
+      # Installation and validation scripts exposed as nix run .#<name> apps.
+      # These scripts orchestrate, verify, and guide — they do not redefine
+      # the configuration, which remains in flake.nix, hosts/, profiles/, and modules/.
+      apps = lib.genAttrs systems (system:
+        let pkgs = import nixpkgs { inherit system; };
+            mkApp = script: {
+              type = "app";
+              program = "${pkgs.writeShellScript (builtins.baseNameOf script) (builtins.readFile script)}";
+            };
+        in {
+          validate-install  = mkApp ./scripts/validate-install.sh;
+          install-anywhere  = mkApp ./scripts/install-anywhere.sh;
+          install-manual    = mkApp ./scripts/install-manual.sh;
+          post-install-check = mkApp ./scripts/post-install-check.sh;
+        }
+      );
     };
 }

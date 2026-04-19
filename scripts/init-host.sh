@@ -124,6 +124,20 @@ LOCALE_VAL="${LOCALE_INPUT:-fr_FR.UTF-8}"
 
 echo ""
 
+# Mot de passe initial
+echo -e "  ${BLD}Mot de passe initial${RST} — utilisé pour l'utilisateur et root à la première connexion"
+echo "  (En clair dans vars.nix — à changer après installation via \`passwd\`)"
+while true; do
+  read -rsp "  password : " PASSWORD_INPUT; echo ""
+  read -rsp "  confirm  : " PASSWORD_CONFIRM; echo ""
+  if [[ "$PASSWORD_INPUT" == "$PASSWORD_CONFIRM" && -n "$PASSWORD_INPUT" ]]; then
+    break
+  fi
+  echo -e "  ${RED}Mots de passe différents ou vides. Réessaie.${RST}"
+done
+
+echo ""
+
 # ---------------------------------------------------------------------------
 # Génération du fichier vars.nix
 # ---------------------------------------------------------------------------
@@ -155,8 +169,9 @@ if [[ -n "$DISK_LINE" ]]; then
 fi
 
 cat >> "$VARS_FILE" << EOF
-  timezone = "$TIMEZONE_VAL"; # see: timedatectl list-timezones
-  locale   = "$LOCALE_VAL"; # system locale
+  timezone        = "$TIMEZONE_VAL"; # see: timedatectl list-timezones
+  locale          = "$LOCALE_VAL"; # system locale
+  initialPassword = "$PASSWORD_INPUT"; # temporary password — change after first login with \`passwd\`
 }
 EOF
 
@@ -175,6 +190,7 @@ echo "  Hostname : $HOSTNAME_VAL"
 [[ -n "$DISK_VAL" ]] && echo "  Disk     : $DISK_VAL"
 echo "  Timezone : $TIMEZONE_VAL"
 echo "  Locale   : $LOCALE_VAL"
+echo "  Password : (défini)"
 echo ""
 echo "  Fichier généré : hosts/$HOST/vars.nix"
 echo ""

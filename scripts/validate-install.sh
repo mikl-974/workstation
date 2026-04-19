@@ -116,7 +116,7 @@ echo "── Valeurs dans vars.nix"
 
 VARS_FILE="$HOST_DIR/vars.nix"
 read_var() {
-  grep -oP "${1}\s*=\s*\"\K[^\"]+" "$VARS_FILE" 2>/dev/null | head -1 || echo ""
+  grep -E "${1}[[:space:]]*=[[:space:]]*\"" "$VARS_FILE" 2>/dev/null | sed -E 's/.*=[[:space:]]*"([^"]+)".*/\1/' | head -1 || echo ""
 }
 
 if [[ -f "$VARS_FILE" ]]; then
@@ -125,6 +125,7 @@ if [[ -f "$VARS_FILE" ]]; then
   DISK=$(read_var "disk")
   TIMEZONE=$(read_var "timezone")
   LOCALE=$(read_var "locale")
+  INITIAL_PASSWORD=$(read_var "initialPassword")
 
   # username
   if [[ -z "$USERNAME" ]]; then
@@ -171,6 +172,15 @@ if [[ -f "$VARS_FILE" ]]; then
     fail "vars.nix : locale non défini ('$LOCALE')"
   else
     ok "locale : $LOCALE"
+  fi
+
+  # initialPassword
+  if [[ -z "$INITIAL_PASSWORD" ]]; then
+    warn "vars.nix : champ 'initialPassword' absent — l'utilisateur n'aura pas de mot de passe (connexion par clé SSH seulement)"
+  elif echo "$INITIAL_PASSWORD" | grep -qE '^DEFINE_'; then
+    fail "vars.nix : initialPassword non défini — remplacer 'DEFINE_PASSWORD' par un vrai mot de passe"
+  else
+    ok "initialPassword : (défini)"
   fi
 else
   fail "vars.nix manquant — impossible de vérifier les valeurs"
@@ -229,7 +239,8 @@ echo "── Dotfiles référencés dans home/default.nix"
 
 HOME_FILE="$REPO_ROOT/home/default.nix"
 if [[ -f "$HOME_FILE" ]]; then
-  DOTFILE_REFS=$(grep -oP '\.\./dotfiles/\K[^\s"]+' "$HOME_FILE" 2>/dev/null || true)
+  DOTFILE_REFS=$(grep -oE '\.\./dotfiles/[^"[:space:]]+' "$HOME_FILE" 2>/dev/null \
+    | sed 's|.*/dotfiles/||; s/;$//' || true)
   if [[ -z "$DOTFILE_REFS" ]]; then
     ok "Aucun dotfile activé dans home/default.nix (section home.file vide)"
   else

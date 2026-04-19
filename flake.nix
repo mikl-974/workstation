@@ -1,8 +1,21 @@
 {
   description = "Personal workstation environments (NixOS, Hyprland, dotfiles, devshells)";
 
+  nixConfig = {
+    extra-substituters      = [ "https://noctalia.cachix.org" ];
+    extra-trusted-public-keys = [ "noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4=" ];
+  };
+
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
+
+    # Noctalia requires nixpkgs-unstable (latest Quickshell dependency).
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
+
+    noctalia = {
+      url = "github:noctalia-dev/noctalia-shell";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
 
     foundation = {
       url = "github:mikl-974/foundation";
@@ -24,10 +37,10 @@
     };
   };
 
-  outputs = { nixpkgs, foundation, disko, home-manager, ... }:
+  outputs = inputs@{ nixpkgs, foundation, disko, home-manager, noctalia, ... }:
     let
       lib = nixpkgs.lib;
-      systems = [ "x86_64-linux" ];
+      systems = [ "x86_64-linux" "aarch64-darwin" "x86_64-darwin" "aarch64-linux" ];
 
       # Foundation NixOS modules consumed by all workstation hosts.
       # Home Manager user binding is per-host (username lives in hosts/<name>/vars.nix).
@@ -37,8 +50,10 @@
         {
           # Global home-manager settings applied to all hosts.
           # useGlobalPkgs avoids a second nixpkgs eval per user.
-          home-manager.useGlobalPkgs = true;
-          home-manager.useUserPackages = true;
+          home-manager.useGlobalPkgs    = true;
+          home-manager.useUserPackages  = true;
+          # Pass flake inputs to every Home Manager module (needed for noctalia HM module).
+          home-manager.extraSpecialArgs = { inherit inputs; };
         }
       ];
 
@@ -46,11 +61,16 @@
       # vars   — attrset imported from hosts/<name>/vars.nix
       # modules — list of NixOS modules specific to the host
       mkHost = { vars, modules }:
+        let
+          hostSystem = if vars ? system then vars.system else "x86_64-linux";
+        in
         lib.nixosSystem {
-          system = "x86_64-linux";
           # hostVars is available to every module in this host as a function argument.
-          specialArgs = { hostVars = vars; };
-          modules = sharedModules ++ [
+          specialArgs = { hostVars = vars; inherit inputs; };
+          modules = [
+            { nixpkgs.hostPlatform = hostSystem; }
+            { nixpkgs.config.allowUnfree = true; }
+          ] ++ sharedModules ++ [
             # Bind the Home Manager config to the username declared in vars.nix.
             { home-manager.users.${vars.username} = import ./home/default.nix; }
           ] ++ modules;
@@ -88,9 +108,18 @@
       # the configuration, which remains in flake.nix, hosts/, profiles/, and modules/.
       apps = lib.genAttrs systems (system:
         let pkgs = import nixpkgs { inherit system; };
+            # writeTextFile preserves the original shebang (#!/usr/bin/env bash),
+            # unlike writeShellScript which prepends #!/bin/sh and breaks BASH_SOURCE.
             mkApp = script: {
               type = "app";
-              program = "${pkgs.writeShellScript (builtins.baseNameOf script) (builtins.readFile script)}";
+              program = toString (pkgs.writeTextFile {
+                name       = builtins.baseNameOf script;
+                executable = true;
+                text       = ''
+                  #!/usr/bin/env bash
+                  exec bash '${toString script}' "$@"
+                '';
+              });
             };
         in {
           init-host          = mkApp ./scripts/init-host.sh;

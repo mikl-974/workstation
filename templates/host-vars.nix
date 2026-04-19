@@ -11,6 +11,10 @@
 # Ou utiliser le script d'initialisation :
 #   nix run .#init-host -- <name>
 {
+  # Architecture de la machine cible.
+  # "x86_64-linux" pour Intel/AMD, "aarch64-linux" pour ARM / VMs Apple Silicon
+  system = "x86_64-linux";
+
   # Nom d'utilisateur système.
   # Doit être un identifiant Unix valide (lettres minuscules, chiffres, tirets).
   # Exemple : "alice", "bob", "mikl"
@@ -34,4 +38,10 @@
   # Locale système.
   # Exemples : "fr_FR.UTF-8", "en_US.UTF-8"
   locale = "fr_FR.UTF-8";
+
+  # Mot de passe initial (en clair — à changer après la première connexion via `passwd`).
+  # Ce mot de passe est utilisé pour l'utilisateur principal et root.
+  # ATTENTION : stocker un mot de passe en clair dans le dépôt n'est pas recommandé
+  # en production — utilisez hashedPasswordFile ou agenix/sops-nix pour les secrets.
+  initialPassword = "DEFINE_PASSWORD";
 }

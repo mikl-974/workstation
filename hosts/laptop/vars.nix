@@ -9,6 +9,7 @@
 # To generate this file interactively:
 #   nix run .#init-host -- laptop
 {
+  system   = "x86_64-linux";    # target architecture
   username = "DEFINE_USERNAME"; # system username — must be a valid Unix username
   hostname = "laptop";          # hostname — matches nixosConfigurations key in flake.nix
   timezone = "Europe/Paris";    # see: timedatectl list-timezones

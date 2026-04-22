@@ -13,6 +13,7 @@ La base desktop Hyprland est organisee ainsi :
   - `modules/desktop/portals.nix`
   - `modules/desktop/fonts.nix`
   - `modules/desktop/warp.nix`
+  - `modules/apps/daily.nix`
   - `modules/apps/utilities.nix`
 - theming : `modules/theming/noctalia.nix`
 
@@ -33,6 +34,7 @@ La base inclut :
 - Noctalia (theme systeme)
 - terminal (`foot`)
 - launcher (`wofi`)
+- applications quotidiennes (`firefox`, `zathura`, `imv`, `thunar`, `file-roller`, `cliphist`, `mako`)
 - outils Wayland minimaux (`waybar`, `wl-clipboard`, `grim`, `slurp`)
 - utilitaires desktop (`pavucontrol`, `brightnessctl`, `playerctl`, `nm-connection-editor`)
 
@@ -66,15 +68,18 @@ Il reste dans `workstation` parce que c'est un client VPN desktop (interface uti
 
 La base desktop integre aussi :
 
+- `modules/apps/daily.nix` pour les applications de base du quotidien
 - `modules/desktop/connectivity.nix` pour la pile Wi-Fi/Bluetooth locale et les applets
 - `modules/apps/utilities.nix` pour les petits outils quotidiens
 
 Solaar est gere dans `modules/desktop/connectivity.nix` via le module NixOS Logitech, car il a besoin des regles udev adequates.
-Les autres petits outils desktop restent dans `modules/apps/utilities.nix`.
+Les applications quotidiennes restent dans `modules/apps/daily.nix`.
+Les petits outils techniques desktop restent dans `modules/apps/utilities.nix`.
 
 ## Etendre proprement
 
 - ajouter la logique desktop commune dans `modules/desktop/`
+- garder les applications quotidiennes dans `modules/apps/daily.nix`
 - garder les choix machine-specifiques dans `hosts/`
 - deplacer la personnalisation utilisateur dans `dotfiles/` + `home/`
 - garder Tailscale dans `profiles/networking.nix`

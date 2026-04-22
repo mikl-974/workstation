@@ -4,6 +4,7 @@
 
 Ajouter une couche claire de logiciels utilitaires et de connectivite locale pour une workstation desktop, sans melanger :
 
+- les applications quotidiennes
 - les paquets applicatifs
 - la configuration systeme desktop
 - les profils
@@ -20,6 +21,7 @@ Deux briques complementaires :
 
 Cette separation suit l'architecture du repo :
 
+- `modules/apps/daily.nix` = applications quotidiennes
 - `modules/apps/` = paquets
 - `modules/desktop/` = configuration systeme desktop
 - `profiles/desktop-hyprland.nix` = composition
@@ -32,10 +34,13 @@ Paquets installes :
 
 | Paquet | Rôle |
 |---|---|
-| `pavucontrol` | mixer audio quotidien |
+| `pavucontrol` | mixer audio / helper technique desktop |
 | `nm-connection-editor` | edition avancee des connexions NetworkManager |
 | `brightnessctl` | controle de luminosite |
 | `playerctl` | controle des lecteurs multimedia |
+
+Ces paquets sont des **helpers techniques desktop**.
+Les applications de base de l'utilisateur (navigateur, PDF, images, fichiers, archives) vivent dans `modules/apps/daily.nix`.
 
 ### `modules/desktop/connectivity.nix`
 
@@ -99,6 +104,7 @@ Ce qui reste dans `foundation` :
 
 Ce qui reste dans `workstation` :
 
+- les daily apps desktop
 - les applets desktop
 - Bluetooth cote utilisateur
 - Solaar
@@ -113,7 +119,8 @@ Regle :
 
 Pour ajouter un nouvel utilitaire :
 
-1. si c'est un paquet utilisateur simple → `modules/apps/utilities.nix`
-2. si c'est une integration systeme desktop → `modules/desktop/connectivity.nix` ou un autre module desktop cible
-3. ne pas le mettre dans un host
-4. ne pas le disperser entre `shell/`, `profiles/` et `dotfiles/` sans raison
+1. si c'est une application quotidienne de base → `modules/apps/daily.nix`
+2. si c'est un helper technique desktop → `modules/apps/utilities.nix`
+3. si c'est une integration systeme desktop → `modules/desktop/connectivity.nix` ou un autre module desktop cible
+4. ne pas le mettre dans un host
+5. ne pas le disperser entre `shell/`, `profiles/` et `dotfiles/` sans raison

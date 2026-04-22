@@ -29,16 +29,18 @@ Briques conservees dans `workstation` :
 - Hyprland et la base desktop : specifique machines utilisateur
 - Cloudflare WARP : client VPN desktop, pas une primitive infra
 - Solaar / Bluetooth / Wi-Fi desktop : integration locale des peripheriques et applets utilisateur
+- Daily apps desktop : applications quotidiennes de base (web, PDF, images, fichiers)
 - Noctalia : theme et identite visuelle du poste
 - Editeurs / IDE (VS Code, Rider, WebStorm) : applications desktop dev
 - theming, dotfiles, profils desktop, configuration utilisateur
 
-## Separation desktop / utilities / dev / gaming / ai / shell
+## Separation desktop / daily / utilities / dev / gaming / ai / shell
 
 | Couche | Localisation | Ce qu'elle contient |
 |---|---|---|
-| Base desktop | `profiles/desktop-hyprland.nix` | Hyprland, terminal, launcher, audio, Noctalia, WARP, Bluetooth, Wi-Fi |
-| Utilities desktop | `modules/apps/utilities.nix` + `modules/desktop/connectivity.nix` | Solaar, nm-applet, Blueman, pavucontrol, brightnessctl, playerctl |
+| Base desktop | `profiles/desktop-hyprland.nix` | Hyprland, terminal, launcher, audio, Noctalia, WARP, Bluetooth, Wi-Fi, daily apps |
+| Daily apps | `modules/apps/daily.nix` | Firefox, Zathura, imv, Thunar, File Roller, cliphist, mako |
+| Utilities desktop | `modules/apps/utilities.nix` + `modules/desktop/connectivity.nix` | Solaar, nm-applet, Blueman, pavucontrol, brightnessctl, playerctl, nm-connection-editor |
 | Dev utilisateur | `profiles/dev.nix` | IDE (VS Code, Rider, WebStorm), outils CLI dev systeme |
 | Gaming | `profiles/gaming.nix` | Steam, Proton, Lutris, Bottles, mangohud, gamescope, gamemode |
 | AI local | `profiles/ai.nix` | ollama, llama-cpp, Flatpak (AnythingLLM Desktop) |
@@ -78,7 +80,7 @@ hosts/                machines concretes
   laptop/
   gaming/
 profiles/             assemblages de roles reutilisables
-  desktop-hyprland.nix  base graphique (Hyprland, Noctalia, WARP, connectivite locale, utilities)
+  desktop-hyprland.nix  base graphique (Hyprland, Noctalia, WARP, connectivite locale, daily apps, utilities)
   dev.nix               outils dev utilisateur (IDE, CLI systeme)
   networking.nix        reseau (Tailscale)
   gaming.nix            profil gaming (Steam, Lutris, gamemode)
@@ -88,6 +90,7 @@ modules/              logique Nix isolee par domaine
   theming/            Noctalia et theming systeme
   apps/
     default.nix       apps desktop generiques
+    daily.nix         applications quotidiennes de base
     utilities.nix     utilitaires desktop quotidiens
     editors.nix       IDE (VS Code, Rider, WebStorm)
     gaming.nix        apps gaming (Lutris, Bottles, mangohud, gamescope, wine)
@@ -154,16 +157,25 @@ Un host importe des profils. Un profil importe un ou plusieurs roles. Un role im
 
 La workstation contient une couche utilitaire desktop volontairement locale :
 
+- `modules/apps/daily.nix` -> applications quotidiennes de base
 - `modules/apps/utilities.nix` -> paquets utilitaires utilisateur
 - `modules/desktop/connectivity.nix` -> Wi-Fi, Bluetooth, Solaar et applets desktop
 
 Cette couche reste dans `workstation` parce qu'elle gere :
 
+- des applications purement liees a la vie quotidienne sur le bureau
 - des applets et outils relies a une session desktop
 - des peripheriques locaux
 - des integrations utilisateur-machine
 
 Elle ne doit pas etre extraite vers `foundation` tant qu'elle n'est pas generique et multi-contexte.
+
+Frontieres retenues :
+
+- `daily.nix` -> applications utilisateur courantes
+- `utilities.nix` -> helpers techniques et petits outils systeme
+- `connectivity.nix` -> integrations desktop/systeme liees au reseau et aux peripheriques
+- `editors.nix` -> editeurs et IDE
 
 ## Distinction workstation/ai vs homelab/ai-server
 

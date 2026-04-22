@@ -44,6 +44,7 @@ Effets notables :
 
 - Hyprland
 - audio desktop
+- daily apps (`modules/apps/daily.nix`)
 - connectivite locale (`modules/desktop/connectivity.nix`)
 - utilitaires desktop (`modules/apps/utilities.nix`)
 - WARP
@@ -61,6 +62,7 @@ Creer un profil `utilities` separe ajouterait une couche artificielle sans gain 
 
 Le bon niveau est donc :
 
+- apps quotidiennes -> `modules/apps/daily.nix`
 - paquets -> `modules/apps/utilities.nix`
 - systeme desktop -> `modules/desktop/connectivity.nix`
 - activation -> `profiles/desktop-hyprland.nix`

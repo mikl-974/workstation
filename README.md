@@ -21,15 +21,17 @@ Briques conservees dans `workstation` :
 | Hyprland + base desktop | specifique machines utilisateur |
 | Cloudflare WARP | client VPN desktop, pas une primitive infra generique |
 | Solaar / Bluetooth / Wi-Fi desktop | gestion locale des peripheriques et applets desktop — pas une primitive infra partagee |
+| Daily apps desktop | applications quotidiennes de base (web, PDF, images, fichiers) — specifiques a l'usage desktop |
 | Editeurs / IDE | VS Code, Rider, WebStorm — applications desktop dev |
 | theming / dotfiles | strictement desktop / utilisateur |
 
-## Separation desktop / utilities / dev / gaming / ai / shell
+## Separation desktop / daily / utilities / dev / gaming / ai / shell
 
 | Couche | Ce qu'elle contient | Localisation |
 |---|---|---|
-| Base desktop | Hyprland, terminal, audio, Noctalia, WARP, Bluetooth, Wi-Fi, Solaar, utilitaires quotidiens | `profiles/desktop-hyprland.nix` |
-| Utilities desktop | Solaar, pavucontrol, brightnessctl, playerctl, nm-connection-editor | `modules/apps/utilities.nix` + `modules/desktop/connectivity.nix` |
+| Base desktop | Hyprland, terminal, audio, Noctalia, WARP, Bluetooth, Wi-Fi, Solaar, daily apps, utilities | `profiles/desktop-hyprland.nix` |
+| Daily apps | navigateur, PDF, images, fichiers, archives, confort desktop | `modules/apps/daily.nix` |
+| Utilities desktop | pavucontrol, brightnessctl, playerctl, nm-connection-editor | `modules/apps/utilities.nix` + `modules/desktop/connectivity.nix` |
 | Dev utilisateur | VS Code, Rider, WebStorm, CLI outils systeme | `profiles/dev.nix` |
 | Gaming | Steam, Proton, Lutris, Bottles, mangohud, gamescope | `profiles/gaming.nix` |
 | AI local | ollama, llama-cpp, Flatpak (AnythingLLM Desktop) | `profiles/ai.nix` |
@@ -84,6 +86,7 @@ Les fichiers structurants (`flake.nix`, `default.nix`, `disko.nix`) lisent leurs
 
 La workstation inclut une couche utilitaire desktop propre pour eviter de disperser :
 
+- les applications quotidiennes dans `modules/apps/daily.nix`
 - les applications utilitaires dans `modules/apps/utilities.nix`
 - la connectivite locale et les integrations systeme dans `modules/desktop/connectivity.nix`
 
@@ -91,10 +94,12 @@ Repartition retenue :
 
 | Couche | Contenu |
 |---|---|
+| `modules/apps/daily.nix` | apps quotidiennes de base (Firefox, Zathura, imv, Thunar, File Roller, cliphist, mako) |
 | `modules/apps/utilities.nix` | outils utilisateur quotidiens (pavucontrol, brightnessctl, playerctl, nm-connection-editor) |
 | `modules/desktop/connectivity.nix` | NetworkManager, nm-applet, Bluetooth, Blueman, Solaar via `hardware.logitech.wireless.*` |
 
 Solaar reste dans `workstation` car il gere des peripheriques desktop locaux (Logitech), avec des besoins udev et d'integration utilisateur. Ce n'est pas une brique `foundation`.
+Les daily apps restent distinctes des utilities : elles couvrent l'usage utilisateur courant, pas les helpers techniques.
 
 ## Theming : Noctalia
 
@@ -119,7 +124,7 @@ Les IDEs (VS Code, Rider, WebStorm) sont installes comme paquets systeme, pas da
 
 Voir `docs/devshells.md`.
 
-Voir aussi `docs/utilities.md` et `docs/profiles.md`.
+Voir aussi `docs/daily-apps.md`, `docs/utilities.md` et `docs/profiles.md`.
 
 ## Installer une machine
 

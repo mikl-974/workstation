@@ -1,6 +1,7 @@
 { pkgs, ... }:
 {
   imports = [
+    ./daily.nix
     ./utilities.nix
   ];
 

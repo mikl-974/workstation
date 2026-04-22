@@ -124,7 +124,7 @@ Les IDEs (VS Code, Rider, WebStorm) sont installes comme paquets systeme, pas da
 
 Voir `docs/devshells.md`.
 
-Voir aussi `docs/daily-apps.md`, `docs/utilities.md` et `docs/profiles.md`.
+Voir aussi `docs/daily-apps.md`, `docs/utilities.md`, `docs/profiles.md` et `docs/update-workflow.md`.
 
 ## Installer une machine
 
@@ -185,6 +185,20 @@ nix run .#post-install-check
 ```
 
 Checklist opératoire : `docs/install-checklist.md`
+
+## Mise a jour depuis la machine
+
+Workflow local recommande :
+
+```bash
+cd ~/workstation
+git pull --ff-only
+sudo nixos-rebuild switch --flake .#$(hostname)
+```
+
+Pour le workflow complet avec revue Git, commit et push :
+
+- voir `docs/update-workflow.md`
 
 ## Hosts
 

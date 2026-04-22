@@ -153,6 +153,17 @@ Après une modification du repo :
 sudo nixos-rebuild switch --flake .#main
 ```
 
+Workflow local complet avec Git :
+
+```bash
+cd ~/workstation
+git pull --ff-only
+git diff
+sudo nixos-rebuild switch --flake .#$(hostname)
+```
+
+Voir `docs/update-workflow.md` pour le workflow complet (etat Git, commit, push, verification).
+
 Ou à distance :
 
 ```bash

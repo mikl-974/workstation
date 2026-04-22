@@ -51,7 +51,7 @@ Les dotfiles effectivement relies par Home Manager sont :
 - `dotfiles/wofi/style.css`
 - `dotfiles/mako/config`
 
-Ils sont actives via `/home/runner/work/workstation/workstation/home/default.nix`.
+Ils sont actives via `home/default.nix`.
 
 ## Ce qui ne va PAS dans `dotfiles/`
 

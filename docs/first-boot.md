@@ -61,7 +61,7 @@ Les dotfiles effectivement branches par Home Manager sont :
 
 Ils sont lies depuis :
 
-- `/home/runner/work/workstation/workstation/home/default.nix`
+- `home/default.nix`
 
 ## Parcours premier login
 

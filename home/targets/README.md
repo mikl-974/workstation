@@ -9,6 +9,9 @@ Un fichier de ce dossier dit explicitement :
 - quels rôles ils reçoivent
 - comment la machine assemble le tout
 
-## Cible actuelle
+## Targets actuels
 
+- `main.nix`
+- `laptop.nix`
+- `gaming.nix`
 - `ms-s1-max.nix`

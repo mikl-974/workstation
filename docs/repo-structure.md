@@ -43,6 +43,7 @@ Contient la composition utilisateur :
 Exemples réels :
 - `home/users/mikl.nix` = identité du user de `main`
 - `home/targets/main.nix` = composition finale de `main`
+- `home/targets/laptop.nix` = composition finale de `laptop`
 - `home/targets/ms-s1-max.nix` = composition finale de `ms-s1-max`
 
 ### `dotfiles/`

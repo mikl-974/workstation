@@ -42,6 +42,22 @@ aucun `home/targets/<host>.nix`.
 
 ### `mikl`
 - rôles : Hyprland
+- identité : `home/users/mikl.nix`
+- affectation : `home/targets/main.nix`
+- dotfiles réellement actifs :
+  - `dotfiles/hyprland/hyprland.conf`
+  - `dotfiles/hyprland/profiles/default.conf`
+  - `dotfiles/terminal/foot.ini`
+  - `dotfiles/launchers/config`
+  - `dotfiles/launchers/style.css`
+  - `dotfiles/notifications/config`
+
+## Cas `laptop`
+
+### `mikl`
+- rôles : Hyprland
+- identité : `home/users/mikl.nix`
+- affectation : `home/targets/laptop.nix`
 - dotfiles réellement actifs :
   - `dotfiles/hyprland/hyprland.conf`
   - `dotfiles/hyprland/profiles/default.conf`
@@ -53,5 +69,5 @@ aucun `home/targets/<host>.nix`.
 ## Legacy
 
 `home/users/default.nix` reste seulement pour les hosts non migrés.
-`main` et `ms-s1-max` n'en dépendent plus ; il ne couvre plus que `laptop` et `gaming`.
+`main`, `laptop` et `ms-s1-max` n'en dépendent plus ; il ne couvre plus que `gaming`.
 Les nouveaux bindings doivent partir de `home/targets/`.

@@ -1,7 +1,7 @@
 { ... }:
 {
   # Temporary compatibility fallback for legacy targets not yet migrated to home/targets/
-  # (currently laptop and gaming). Remove it once those hosts get explicit home/targets/.
+  # (currently gaming only). Remove it once that host gets an explicit home/targets/.
   #
   # Normalized user identities available in this repo:
   #   - ./mfo.nix  = Mickaël Folio

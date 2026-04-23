@@ -9,10 +9,11 @@ Le binding se fait dans `home/`.
 
 ## Modèle concret actuel
 
-### Binding moderne sur `main`
+### Binding moderne sur `main` et `laptop`
 - `home/targets/main.nix` lie `home/users/mikl.nix` avec `home/roles/desktop-hyprland.nix`
-- les dotfiles actifs de `main` restent ceux de la base Hyprland commune
-- aucun chemin legacy implicite n'est nécessaire pour `main`
+- `home/targets/laptop.nix` lie `home/users/mikl.nix` avec `home/roles/desktop-hyprland.nix`
+- les dotfiles actifs de `main` et `laptop` restent ceux de la base Hyprland commune
+- aucun chemin legacy implicite n'est nécessaire pour `main` ni pour `laptop`
 
 ### Base commune par app/domaine
 - `dotfiles/hyprland/hyprland.conf`

@@ -26,9 +26,19 @@ Il ne contient jamais :
 | `modules/darwin/` | Base et intégrations Darwin (`nix-darwin`, `nix-homebrew`) |
 | `modules/desktop/` | Base système desktop (Hyprland, audio, connectivité) |
 | `modules/devshells/` | Environnements de développement CLI |
-| `modules/profiles/` | Assemblages réutilisables (composés dans les targets, ex. `virtual-machine.nix`) |
-| `modules/roles/` | Composition d'apps + config système pour un usage |
-| `modules/security/` | Intégrations sécurité réutilisables (`sops-nix`) |
+| `modules/dokploy/` | Activation Docker + ports nécessaires à Dokploy (consommé par `targets/hosts/contabo/`) |
+| `modules/networking/` | Briques réseau réutilisables (`tailscale`, `firewall-server`) |
+| `modules/profiles/` | **Portes d'entrée publiques** importées par les targets (`virtual-machine`, `server`, `desktop-hyprland`, `gaming`, `ai`, …) |
+| `modules/roles/` | **Compositions internes** d'un usage fonctionnel (`gaming`, `ai`) — réutilisées par les profils correspondants ; jamais importées directement par un target |
+| `modules/security/` | Intégrations sécurité réutilisables (`sops-nix`, `ssh`, `server`) |
 | `modules/shell/` | Configuration shell système |
+| `modules/templates/` | Templates de configuration (ex. `host-vars.nix`) |
 | `modules/theming/` | Theming et identité visuelle |
-| `modules/templates/` | Templates de configuration |
+| `modules/users/` | Modules user système (ex. `admin` pour les server-class) |
+
+## Convention `profiles/` vs `roles/`
+
+- Un **profile** est la porte d'entrée que les `targets/hosts/<host>/` importent. Il assemble plusieurs modules cohérents et expose une API stable.
+- Un **role** est une composition interne réutilisée par les profils. Il ne doit **pas** être importé directement par un target — l'importation passe toujours par un profile.
+
+Exemple : `modules/profiles/gaming.nix` est un wrapper d'une ligne autour de `modules/roles/gaming.nix`. Le wrapper existe pour stabiliser l'API publique : si demain `gaming.nix` doit composer plusieurs roles ou ajouter une option, le contrat des hosts qui l'importent ne change pas.

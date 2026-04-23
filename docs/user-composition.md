@@ -38,6 +38,15 @@
 Ils existent comme identités normalisées mais ne sont encore composés dans
 aucun `home/targets/<host>.nix`.
 
+## Hosts sans composition utilisateur
+
+Deux hosts NixOS du repo n'ont aucune composition Home Manager :
+
+- `home/targets/openclaw-vm.nix` = `{}` — VM de service portant `stacks/openclaw/`. Aucun desktop, aucun user composé.
+- `home/targets/contabo.nix` = `{ }` — serveur VPS headless. L'opérateur (`admin`) est provisionné au niveau système par `modules/users/admin.nix`, sans Home Manager.
+
+Ces bindings vides sont **intentionnels** : `mkHomeUsers` dans le `flake.nix` exige qu'un fichier existe pour tout host NixOS (plus de fallback implicite). Voir `home/targets/README.md`.
+
 ## Cas `main`
 
 ### `mikl`

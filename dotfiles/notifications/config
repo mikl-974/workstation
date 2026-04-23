@@ -1,0 +1,23 @@
+sort=-time
+layer=overlay
+anchor=top-right
+default-timeout=5000
+ignore-timeout=0
+max-visible=5
+width=360
+height=120
+margin=12
+padding=12
+border-size=2
+background-color=#11111b
+text-color=#cdd6f4
+border-color=#89b4fa
+progress-color=over #313244
+icons=1
+markup=1
+actions=1
+font=Sans 10
+
+[urgency=high]
+border-color=#f38ba8
+default-timeout=0

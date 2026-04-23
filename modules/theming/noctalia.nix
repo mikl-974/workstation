@@ -13,6 +13,16 @@ let
   cfg = config.workstation.theming.noctalia;
 in
 {
+  # Noctalia is the personal color scheme and visual identity of this workstation.
+  # It is intentionally kept in workstation — it is not a generic theme primitive.
+  #
+  # At this stage, this module:
+  #   - installs the base theming packages (GTK, icons, cursor)
+  #   - sets system-level GTK theme environment variables
+  #   - provides the activation point for all future Noctalia theming work
+  #
+  # Dotfiles (Hyprland colors, waybar CSS, foot theme, etc.) live in dotfiles/themes/noctalia/
+  # and are managed through the active Home Manager composition.
   options.workstation.theming.noctalia.enable =
     lib.mkEnableOption "Noctalia desktop shell and personal theme";
 

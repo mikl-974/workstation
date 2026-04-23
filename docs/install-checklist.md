@@ -10,12 +10,13 @@ Pour les détails, voir `docs/manual-install.md` ou `docs/nixos-anywhere.md`.
 ### Machine cible
 
 - [ ] Hostname confirmé (`main`, `laptop`, ou `gaming`)
-- [ ] `hosts/<hostname>/default.nix` existe
-- [ ] `hosts/<hostname>/disko.nix` existe (requis pour NixOS Anywhere et recommandé en manuel)
+- [ ] `targets/hosts/<hostname>/default.nix` existe
+- [ ] `targets/hosts/<hostname>/disko.nix` existe (requis pour NixOS Anywhere et recommandé en manuel)
 
 ### Configuration machine (vars.nix)
 
-- [ ] `hosts/<hostname>/vars.nix` existe — initialiser avec `nix run .#init-host -- <hostname>` si absent
+- [ ] `targets/hosts/<hostname>/vars.nix` existe — initialiser avec `nix run .#init-host -- <hostname>` si absent
+- [ ] `system` défini (`x86_64-linux` ou `aarch64-linux`)
 - [ ] `username` défini (identifiant Unix valide)
 - [ ] `hostname` défini (correspond à la clé nixosConfigurations dans flake.nix)
 - [ ] `disk` défini si disko.nix est présent — vérifier avec `lsblk` sur la machine cible
@@ -25,6 +26,7 @@ Pour les détails, voir `docs/manual-install.md` ou `docs/nixos-anywhere.md`.
 
 ### Validation
 
+- [ ] `nix run .#doctor -- --host <hostname>` exécuté sans erreur bloquante
 - [ ] `nix run .#validate-install -- <hostname>` exécuté sans erreur bloquante
 - [ ] Aucun placeholder dans les fichiers structurants (flake.nix, default.nix, disko.nix)
 
@@ -74,6 +76,7 @@ Pour les détails, voir `docs/manual-install.md` ou `docs/nixos-anywhere.md`.
 
 - [ ] Connexion SSH ou login console avec l'utilisateur défini dans vars.nix
 - [ ] `sudo nixos-rebuild switch --flake .#<hostname>` si rebuild nécessaire
+- [ ] `docs/first-boot.md` relu et appliqué
 
 ### Home Manager / Dotfiles
 
@@ -82,8 +85,9 @@ Pour les détails, voir `docs/manual-install.md` ou `docs/nixos-anywhere.md`.
 
 ### Vérifications post-install
 
-- [ ] `nix run .#post-install-check` exécuté sans erreur critique
+- [ ] `nix run .#post-install-check -- --host <hostname>` exécuté sans erreur critique
 - [ ] Hyprland disponible : `which Hyprland`
+- [ ] `mako`, `cliphist`, `wofi`, `foot`, `firefox`, `thunar` présents si profil desktop actif
 - [ ] Tailscale actif : `systemctl status tailscaled`
 - [ ] Audio fonctionnel : `systemctl status pipewire`
 - [ ] DevShell .NET accessible : `nix develop .#dotnet`
@@ -94,8 +98,8 @@ Pour les détails, voir `docs/manual-install.md` ou `docs/nixos-anywhere.md`.
 
 | Symptôme | Piste |
 |---|---|
-| Champ DEFINE_ restant | Compléter `hosts/<hostname>/vars.nix`, relancer `nix run .#validate-install -- <hostname>` |
-| Rebuild échoue | Vérifier les erreurs Nix, corriger `hosts/<hostname>/vars.nix` ou `hosts/` |
+| Champ DEFINE_ restant | Compléter `targets/hosts/<hostname>/vars.nix`, relancer `nix run .#validate-install -- <hostname>` |
+| Rebuild échoue | Vérifier les erreurs Nix, corriger `targets/hosts/<hostname>/vars.nix` ou `targets/` |
 | Home Manager non appliqué | Vérifier que le username dans `vars.nix` correspond à l'utilisateur système |
-| Dotfiles absents | Vérifier `home/default.nix` — les entrées doivent pointer vers des fichiers existants |
-| Service manquant | Vérifier que le profil correspondant est importé dans `hosts/<hostname>/default.nix` |
+| Dotfiles absents | Vérifier la composition Home Manager active (`home/targets/<host>.nix`) — les entrées doivent pointer vers des fichiers existants |
+| Service manquant | Vérifier que le profil correspondant est importé dans `targets/hosts/<hostname>/default.nix` |

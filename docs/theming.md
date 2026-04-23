@@ -7,7 +7,7 @@ Le theming repose sur **Noctalia Shell**, un shell desktop complet (barre, launc
 | Couche | Localisation | Rôle |
 |---|---|---|
 | Module système | `modules/theming/noctalia.nix` | Packages GTK/curseur, env vars, activation |
-| Module Home Manager | `home/noctalia.nix` | Configuration Noctalia (barre, couleurs, widgets) via le module HM officiel |
+| Module Home Manager | `home/roles/noctalia.nix` | Configuration Noctalia (barre, couleurs, widgets) via le module HM officiel |
 
 ## Activation
 
@@ -24,7 +24,7 @@ Tous les hosts qui importent `desktop-hyprland.nix` héritent de Noctalia.
 Installe le package `noctalia-shell` depuis le flake input, plus les packages GTK/curseur.
 Configure `GTK_THEME=Adwaita:dark`.
 
-## Module Home Manager (`home/noctalia.nix`)
+## Module Home Manager (`home/roles/noctalia.nix`)
 
 Importe `inputs.noctalia.homeModules.default` et configure :
 - Position de la barre, type, widgets
@@ -59,20 +59,20 @@ QT_QUICK_BACKEND = "software";  # dans modules/desktop/hyprland.nix
 
 ## Modifier la configuration
 
-Éditer `home/noctalia.nix` — section `programs.noctalia-shell.settings`.
+Éditer `home/roles/noctalia.nix` — section `programs.noctalia-shell.settings`.
 
 Documentation officielle : https://docs.noctalia.dev/
 
 | Couche | Localisation | Role |
 |---|---|---|
 | Module systeme | `modules/theming/noctalia.nix` | packages GTK, env vars, activation |
-| Assets visuels | `dotfiles/noctalia/` | couleurs, wallpapers, CSS applicatifs |
+| Assets visuels | `dotfiles/themes/noctalia/` | couleurs, wallpapers, CSS applicatifs |
 
 Ces deux couches sont intentionnellement separees : le module Nix gere ce qui releve du systeme, les dotfiles gerent ce qui releve de la personnalisation visuelle brute.
 
 ## Activation
 
-Noctalia est active dans `profiles/desktop-hyprland.nix` :
+Noctalia est active dans `modules/profiles/desktop-hyprland.nix` :
 
 ```nix
 workstation.theming.noctalia.enable = true;
@@ -91,14 +91,14 @@ Ce module installe :
 Et configure :
 - `GTK_THEME=Adwaita:dark` (variable de session — peut etre surchargee par home-manager)
 
-## Dotfiles visuels (`dotfiles/noctalia/`)
+## Dotfiles visuels (`dotfiles/themes/noctalia/`)
 
-La palette de couleurs et les assets visuels vivent dans `dotfiles/noctalia/`.
+La palette de couleurs et les assets visuels vivent dans `dotfiles/themes/noctalia/`.
 
 Structure prevue :
 
 ```
-dotfiles/noctalia/
+dotfiles/themes/noctalia/
   colors.conf          palette de base (variables nommees)
   wallpaper/           fonds d'ecran
   gtk/                 surcharges CSS GTK
@@ -106,7 +106,7 @@ dotfiles/noctalia/
   foot/                snippet couleurs foot (inclus dans foot.ini)
 ```
 
-Les fichiers de ce dossier sont lies par Home Manager (`home/default.nix`).
+Les fichiers de ce dossier sont lies par Home Manager (la composition Home Manager active (`home/targets/<host>.nix`)).
 
 ## Etendre Noctalia
 
@@ -116,8 +116,8 @@ Dans `modules/theming/noctalia.nix`, section `environment.systemPackages`.
 
 ### Ajouter un fichier de theme applicatif
 
-1. Placer le fichier dans `dotfiles/noctalia/`
-2. L'enregistrer dans `home/default.nix` via `home.file`
+1. Placer le fichier dans `dotfiles/themes/noctalia/`
+2. L'enregistrer dans la composition Home Manager active (`home/targets/<host>.nix`) via `home.file`
 
 ### Changer le theme GTK
 

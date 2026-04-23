@@ -1,128 +1,164 @@
-# Architecture du repo `workstation`
+# Architecture du repo `infra`
 
-## Philosophie
+## Principe
 
-`workstation` est dedie aux environnements utilisateur (desktop, dotfiles, devShells), avec une architecture modulaire et multi-machines.
+Le repo Git s'appelle encore `workstation`, mais son rôle cible est `infra`.
+Il porte maintenant ensemble :
+- machines NixOS
+- machines Darwin
+- users
+- rôles Home Manager
+- dotfiles
+- stacks
+- secrets
 
-Ce repo est volontairement separe de `homelab` :
+## Frontières
 
-- `workstation` = machines utilisateur
-- `homelab` = serveurs et infrastructure
-
-Il consomme `foundation` comme socle partage sans en dependre structurellement.
-
-## Relation avec `foundation`
-
-`foundation` fournit des briques generiques reutilisables (modules NixOS, conventions).
-
-Regle stricte :
-- `foundation` ne connait pas `workstation`
-- `workstation` importe `foundation` via input flake
-
-Briques actuellement consommees depuis `foundation` :
-
-- `foundation.nixosModules.networkingTailscale` — module Tailscale
-
-Briques conservees dans `workstation` :
-
-- devShell `.NET` : environnement CLI de dev personnel (Docker, playwright) — pas une brique generique
-- Hyprland et la base desktop : specifique machines utilisateur
-- Cloudflare WARP : client VPN desktop, pas une primitive infra
-- Noctalia : theme et identite visuelle du poste
-- Editeurs / IDE (VS Code, Rider, WebStorm) : applications desktop dev
-- theming, dotfiles, profils desktop, configuration utilisateur
-
-## Separation desktop / dev / shell
-
-| Couche | Localisation | Ce qu'elle contient |
+| Couche | Rôle | Exemple |
 |---|---|---|
-| Base desktop | `profiles/desktop-hyprland.nix` | Hyprland, terminal, launcher, audio, Noctalia |
-| Dev utilisateur | `profiles/dev.nix` | IDE (VS Code, Rider, WebStorm), outils CLI dev systeme |
-| Shell dev | `devshells/dotnet.nix` | SDK .NET, Docker CLI, playwright, outils CLI |
+| `modules/` | briques réutilisables | profiles, security, darwin |
+| `targets/hosts/` | réalité machine | `main`, `openclaw-vm`, `macmini` |
+| `home/users/` | identité d’un user | `mikl.nix`, `mfo.nix`, `dfo.nix`, `zfo.nix`, `lfo.nix` |
+| `home/roles/` | binding réutilisable par usage | `desktop-hyprland.nix`, `terminal-kitty.nix` |
+| `home/targets/` | composition finale par machine | `main.nix`, `openclaw-vm.nix`, `ms-s1-max.nix` |
+| `dotfiles/` | contenu brut réutilisable | Hyprland, Kitty, GTK |
+| `stacks/` | services/applications | `ai-server/`, `openclaw/` |
+| `secrets/` | source chiffrée | `secrets/hosts/ms-s1-max.yaml` |
 
-Les editeurs / IDE sont des applications desktop installes en tant que paquets systeme.
-Ils ne vivent pas dans un devShell.
-Le devShell fournit les runtimes et outils CLI avec lesquels les editeurs travaillent.
+Le contexte "machine virtuelle" ne crée pas un nouveau type de target :
+- le host reste concret dans `targets/hosts/`
+- la VM est modélisée comme profil réutilisable dans `modules/profiles/virtual-machine.nix`
 
-## Modele de composition
+## NixOS vs Darwin
 
-1. `hosts/` decrit une machine reelle
-2. chaque host importe un ou plusieurs `profiles/`
-3. les profils assemblent des `modules/` cibles et des briques `foundation`
-4. les dotfiles restent decouples dans `dotfiles/`
-5. les environnements de dev CLI sont definis localement dans `devshells/`
-6. la configuration utilisateur est geree par Home Manager (`home/default.nix`)
+Le repo distingue maintenant explicitement :
+- `nixosConfigurations.*` pour les targets NixOS
+- `darwinConfigurations.*` pour les targets Darwin
 
-## Inputs flake
+Un target Darwin reste un target concret dans `targets/hosts/`.
+Il ne devient pas un faux host NixOS.
 
-| Input | Role |
-|---|---|
-| `nixpkgs` | Packages NixOS |
-| `foundation` | Modules NixOS partages (Tailscale) |
-| `disko` | Partitionnement declaratif — requis pour NixOS Anywhere |
-| `home-manager` | Gestion de la configuration utilisateur et des dotfiles |
+## Bare metal vs VM
 
-## Structure des fichiers
+- `bare-metal` et `virtual-machine` décrivent un contexte machine
+- ce ne sont ni des hosts abstraits, ni des modes d'installation
+- un host VM importe `modules/profiles/virtual-machine.nix`
+- `vars.nix` reste réservé aux valeurs opératoires machine-locales (`disk`, `timezone`, etc.)
+- le profil VM ne prend pas en charge `disko.nix`, le disque réel, ni les guest tools hyperviseur-spécifiques
 
-```
-flake.nix             point d'entree, inputs, nixosConfigurations, devShells
-hosts/                machines concretes
-  main/
-    default.nix       configuration host (profils, hostname, boot)
-    disko.nix         layout disque (GPT + EFI + btrfs)
-  laptop/
-  gaming/
-profiles/             assemblages de modules reutilisables
-  desktop-hyprland.nix  base graphique (Hyprland, Noctalia, WARP)
-  dev.nix               outils dev utilisateur (IDE, CLI systeme)
-  networking.nix        reseau (Tailscale)
-  gaming.nix            profil gaming
-modules/              logique Nix isolee par domaine
-  desktop/            Hyprland, audio, portals, fonts, WARP
-  theming/            Noctalia et theming systeme
-  apps/
-    default.nix       apps desktop generiques
-    editors.nix       IDE (VS Code, Rider, WebStorm)
-  shell/              configuration shell systeme
-devshells/            environnements de dev CLI locaux
-  dotnet.nix          shell .NET (SDK, Docker CLI, playwright)
-home/                 configuration Home Manager (utilisateur)
-  default.nix         dotfiles, xdg, paquets utilisateur
-dotfiles/             configurations applicatives brutes
-  hypr/               Hyprland
-  foot/               terminal
-  wofi/               launcher
-  shell/              shell
-  noctalia/           theme Noctalia (palette, assets)
-  editors/            editeurs (VS Code, Rider)
-docs/                 documentation
-```
+## NixOS moderne actuel
 
-## Evolution multi-machines
+Cinq targets NixOS réels valident maintenant le modèle moderne :
+- `main` en mono-user explicite
+- `laptop` en mono-user explicite
+- `gaming` en mono-user explicite
+- `openclaw-vm` en host VM de service explicite
+- `ms-s1-max` en multi-user explicite
 
-La structure est prete pour `main`, `laptop`, `gaming` sans changer le layout :
+### `main`
+- host concret : `targets/hosts/main/`
+- composition Home Manager : `home/targets/main.nix`
+- identité user : `home/users/mikl.nix`
+- rôle réutilisable : `home/roles/desktop-hyprland.nix`
+- installation NixOS Anywhere : structure prête via `targets/hosts/main/disko.nix`, disque réel encore machine-dépendant
 
-- ajouter un host = nouveau dossier dans `hosts/<name>/`
-- factoriser ce qui est commun en `profiles/`
-- isoler la logique technique reutilisable dans `modules/`
+### `laptop`
+- host concret : `targets/hosts/laptop/`
+- composition Home Manager : `home/targets/laptop.nix`
+- identité user : `home/users/mikl.nix`
+- rôle réutilisable : `home/roles/desktop-hyprland.nix`
+- installation NixOS Anywhere : structure prête via `targets/hosts/laptop/disko.nix`, disque réel encore machine-dépendant
 
-## Quand une brique doit rester dans `workstation`
+### `gaming`
+- host concret : `targets/hosts/gaming/`
+- composition Home Manager : `home/targets/gaming.nix`
+- identité user : `home/users/mikl.nix`
+- rôles réutilisables : `home/roles/desktop-hyprland.nix`, `home/roles/gaming-steam.nix`
+- installation NixOS Anywhere : structure prête via `targets/hosts/gaming/disko.nix`, disque réel encore machine-dépendant
 
-Une brique reste dans `workstation` si elle est :
+### `openclaw-vm`
+- host concret : `targets/hosts/openclaw-vm/`
+- profil réutilisable : `modules/profiles/virtual-machine.nix`
+- stack portée : `stacks/openclaw/`
+- module upstream consommé : `nix-openclaw.nixosModules.openclaw-gateway`
+- composition Home Manager : `home/targets/openclaw-vm.nix` volontairement vide
+- base système : VM de service minimale avec SSH et boot explicite
+- installation NixOS Anywhere : structure prête via `targets/hosts/openclaw-vm/disko.nix`, disque réel encore machine-dépendant
 
-- liee au bureau/utilisateur (Hyprland, theming, WARP)
-- trop specifique au poste de travail pour etre partagee utilement
-- pas encore testee dans d'autres contextes
+`main`, `laptop` et `gaming` ne dépendent plus d'aucun fallback Home Manager.
 
-Une brique passe dans `foundation` si elle est :
+## Users normalisés
 
-- generique (networking, securite de base, users)
-- utilisable sur des serveurs comme sur des postes
-- stable et clairement delimitee
+Le repo expose maintenant des identités explicites dans `home/users/` :
+- `mfo` = Mickaël Folio
+- `dfo` = Delphine Folio
+- `zfo` = Zoé Folio
+- `lfo` = Léna Folio
 
-## Extension propre
+Définir un user dans `home/users/` ne l'active pas automatiquement.
+L'affectation réelle reste déclarée dans `home/targets/<host>.nix`.
 
-- ajouter des modules petits et cibles dans `modules/`
-- factoriser les comportements communs en `profiles/`
-- consommer `foundation` via l'input flake, pas via copie locale
-- documenter chaque nouvelle brique fonctionnelle dans `docs/`
+Un host de service comme `openclaw-vm` peut garder un binding Home Manager vide
+si aucune composition utilisateur n'est réellement utile.
+
+## Darwin actuel
+
+Le premier target Darwin modélisé est `macmini`.
+
+### Base réutilisable
+- `modules/darwin/base.nix` : base commune Darwin (`allowUnfree`, flakes, revision, stateVersion, hostPlatform)
+- `modules/darwin/homebrew.nix` : activation Homebrew / nix-homebrew commune
+
+### Spécifique machine
+- `targets/hosts/macmini/config/user.nix` : user principal Darwin
+- `targets/hosts/macmini/config/apps.nix` : paquets Nix + casks Homebrew
+- `targets/hosts/macmini/config/networking.nix` : apps MAS réseau/VPN
+
+### Principe d'installation
+- Nix quand le package est proprement disponible sur Darwin
+- Homebrew quand le bon adapter macOS est Homebrew
+- MAS quand l'App Store est le canal pragmatique
+
+## Secrets
+
+Le premier flux réel branché utilise `sops-nix` pour `ms-s1-max` :
+- le YAML chiffré vit dans `secrets/hosts/ms-s1-max.yaml`
+- le host l'active via `infra.security.sops.defaultSopsFile`
+- les hashes de mot de passe sont injectés vers `hashedPasswordFile`
+- les bootstrap passwords sont matérialisés en root-only sous `/run/secrets/ms-s1-max/bootstrap/`
+
+## Legacy
+
+Le fallback `home/users/default.nix` a été retiré.
+Les hosts NixOS utilisent maintenant tous un binding explicite dans `home/targets/`.
+Le target Darwin `macmini` reste séparé de cette logique Home Manager NixOS.
+
+## Parcours d'installation NixOS
+
+- `main`, `laptop`, `gaming` et `openclaw-vm` ont maintenant un `disko.nix` branché
+- leur parcours NixOS Anywhere est donc préparé structurellement
+- le dernier paramètre volontairement local reste `disk` dans `vars.nix`, à renseigner sur la machine cible
+- `ms-s1-max` reste sur un parcours manuel tant qu'aucun `disko.nix` n'est défini pour ce host
+
+Le même principe vaut pour une VM :
+- le workflow NixOS Anywhere ou manuel reste celui du host concret
+- le profil VM ne remplace pas la nécessité de renseigner le bon disque
+- le choix firmware/réseau/hyperviseur reste un choix du target concret
+
+## OpenClaw : séparation des responsabilités
+
+- `openclaw-vm` = la machine concrète
+- `virtual-machine.nix` = le contexte VM réutilisable
+- `stacks/openclaw/` = l’adaptateur local du repo
+- `nix-openclaw` = le packaging et le module officiels upstream
+
+La machine décide qu'elle porte la stack.
+La stack ne devient pas un host.
+
+Le rôle de `stacks/openclaw/default.nix` est volontairement mince :
+- importer le bon module upstream
+- mapper l’interface locale `infra.stacks.openclaw.*`
+- préparer port, config, données, logs, `public.env`
+- générer le secret minimal de bootstrap nécessaire au gateway auth
+- garder un point d’entrée `sops-nix` pour des secrets externes réels quand ils existent
+- éviter toute réimplémentation maison d’OpenClaw

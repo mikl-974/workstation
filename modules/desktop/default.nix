@@ -3,6 +3,7 @@
   imports = [
     ./hyprland.nix
     ./audio.nix
+    ./connectivity.nix
     ./portals.nix
     ./fonts.nix
     ./warp.nix
@@ -21,7 +22,10 @@
   services.dbus.enable = true;
   services.greetd.enable = true;
   services.greetd.settings.default_session = {
-    command = "${pkgs.greetd.tuigreet}/bin/tuigreet --time --remember --cmd Hyprland";
+    # Generic greetd default for Hyprland-centric hosts; mixed-desktop hosts can
+    # still override or disable greetd at the target level.
+    # No --remember here: keep the greeter stateless unless a target opts in.
+    command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd Hyprland";
     user = "greeter";
   };
 }

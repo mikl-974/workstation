@@ -1,37 +1,21 @@
 #!/usr/bin/env bash
 # install-manual.sh — Guide d'installation manuelle NixOS
-#
-# Ce script assiste le parcours d'installation manuelle depuis un live ISO NixOS.
-# Il affiche les étapes, vérifie certains fichiers, et rappelle les commandes.
-# Il ne remplace pas le jugement de l'opérateur.
-#
-# Usage :
-#   ./scripts/install-manual.sh [--host <host>]
-#   nix run .#install-manual -- [--host <host>]
-#
-# Exemple :
-#   ./scripts/install-manual.sh --host main
 
 set -euo pipefail
 
 _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [[ "$_SCRIPT_DIR" == /nix/store/* ]]; then
-  REPO_ROOT="$PWD"
-else
-  REPO_ROOT="$(cd "$_SCRIPT_DIR/.." && pwd)"
-fi
+# shellcheck source=./lib/workstation-install.sh
+source "$_SCRIPT_DIR/lib/workstation-install.sh"
+REPO_ROOT="$(resolve_repo_root "$_SCRIPT_DIR")"
 
 BLD='\033[1m'
 CYN='\033[0;36m'
 GRN='\033[0;32m'
 YLW='\033[1;33m'
+RED='\033[0;31m'
 RST='\033[0m'
 
 HOST=""
-
-# ---------------------------------------------------------------------------
-# Arguments
-# ---------------------------------------------------------------------------
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -50,28 +34,48 @@ done
 if [[ -z "$HOST" ]]; then
   echo ""
   echo -e "${BLD}Hosts disponibles :${RST}"
-  ls "$REPO_ROOT/hosts" | while read -r h; do echo "  - $h"; done
+  while IFS= read -r host; do
+    [[ -z "$host" ]] && continue
+    echo "  - $host"
+  done < <(list_hosts "$REPO_ROOT")
   echo ""
   read -rp "Host cible : " HOST
 fi
 
-HOST_DIR="$REPO_ROOT/hosts/$HOST"
-
+HOST_DIR="$REPO_ROOT/targets/hosts/$HOST"
 if [[ ! -d "$HOST_DIR" ]]; then
-  echo "Erreur : hosts/$HOST/ introuvable."
+  echo -e "${RED}Erreur : targets/hosts/$HOST/ introuvable.${RST}"
   exit 1
 fi
 
-# ---------------------------------------------------------------------------
-# Présentation
-# ---------------------------------------------------------------------------
+VARS_FILE="$(host_vars_file "$REPO_ROOT" "$HOST")"
+SYSTEM="$(read_nix_string_var "$VARS_FILE" "system")"
+USERNAME="$(read_nix_string_var "$VARS_FILE" "username")"
+DISK="$(read_nix_string_var "$VARS_FILE" "disk")"
+TIMEZONE="$(read_nix_string_var "$VARS_FILE" "timezone")"
+LOCALE="$(read_nix_string_var "$VARS_FILE" "locale")"
+
+VALIDATE_SCRIPT="$REPO_ROOT/scripts/validate-install.sh"
+if [[ -f "$VALIDATE_SCRIPT" ]]; then
+  if ! bash "$VALIDATE_SCRIPT" "$HOST"; then
+    echo ""
+    echo -e "${RED}Le host '$HOST' n'est pas prêt : parcours manuel interrompu.${RST}"
+    exit 1
+  fi
+fi
 
 echo ""
 echo -e "${BLD}${CYN}=== Guide d'installation manuelle NixOS : host '$HOST' ===${RST}"
 echo ""
-echo "  Ce guide accompagne l'installation depuis un live ISO NixOS."
-echo "  Chaque étape est expliquée. Les commandes sont à exécuter sur la machine cible."
+echo "  Ce fallback suit la même source de vérité que le parcours NixOS Anywhere."
 echo "  Référence complète : docs/manual-install.md"
+echo ""
+echo -e "  ${BLD}Résumé host${RST}"
+echo "    system   : ${SYSTEM:-inconnu}"
+echo "    username : ${USERNAME:-inconnu}"
+echo "    disk     : ${DISK:-non requis}"
+echo "    timezone : ${TIMEZONE:-inconnue}"
+echo "    locale   : ${LOCALE:-inconnue}"
 echo ""
 
 pause() {
@@ -85,189 +89,102 @@ step() {
   echo ""
 }
 
-# ---------------------------------------------------------------------------
-# Étape 1 : Boot ISO
-# ---------------------------------------------------------------------------
-
 step "1/9" "Boot sur l'ISO NixOS"
-
 echo "  • Télécharger l'ISO NixOS minimal : https://nixos.org/download/"
-echo "  • Écrire sur une clé USB : dd if=nixos-minimal.iso of=/dev/sdX bs=4M status=progress"
+echo "  • Écrire sur une clé USB : dd if=nixos-minimal.iso of=/dev/sdX bs=4M status=progress conv=fsync"
+echo "    (`conv=fsync` force la synchronisation finale pour éviter une clé incomplètement écrite)"
 echo "  • Booter la machine cible sur la clé USB"
-echo "  • Vérifier que le système a booté : uname -a"
-
+echo "  • Vérifier : uname -a"
 pause
-
-# ---------------------------------------------------------------------------
-# Étape 2 : Réseau
-# ---------------------------------------------------------------------------
 
 step "2/9" "Préparation réseau"
-
 echo "  • Vérifier la connectivité : ping -c 3 github.com"
-echo ""
-echo "  Si connexion filaire : automatique dans la plupart des cas."
-echo "  Si Wi-Fi :"
-echo "    wpa_supplicant -B -i wlan0 -c <(wpa_passphrase SSID 'PASS')"
-echo "    dhclient wlan0"
-echo ""
-echo "  Activer SSH pour accès distant :"
-echo "    passwd root          # définir un mot de passe temporaire"
-echo "    systemctl start sshd"
-echo "    ip a                 # noter l'IP"
-
+echo "  • Pour le Wi-Fi :"
+echo "      wpa_supplicant -B -i wlan0 -c <(wpa_passphrase \"SSID\" \"PASS\")"
+echo "      dhclient wlan0"
+echo "  • Pour un accès distant :"
+echo "      passwd root"
+echo "      systemctl start sshd"
+echo "      ip a"
 pause
-
-# ---------------------------------------------------------------------------
-# Étape 3 : Partitionnement
-# ---------------------------------------------------------------------------
 
 step "3/9" "Partitionnement et formatage"
-
-if [[ -f "$HOST_DIR/disko.nix" ]]; then
-  DISK=$(grep -oP 'disk\s*=\s*"\K[^"]+' "$HOST_DIR/vars.nix" 2>/dev/null | head -1 || echo "NON DÉFINI")
-  echo "  disko.nix disponible pour ce host."
-  echo "  Disque configuré dans hosts/$HOST/vars.nix : $DISK"
+if host_uses_disko "$REPO_ROOT" "$HOST"; then
+  echo "  disko.nix est disponible pour ce host."
+  echo "  Disque configuré : ${DISK:-NON DÉFINI}"
   echo ""
-  if echo "$DISK" | grep -qE 'DEFINE_DISK|NON DÉFINI'; then
-    echo -e "  ${YLW}⚠ Le disque n'est pas encore défini dans hosts/$HOST/vars.nix.${RST}"
-    echo "  Sur la machine cible : lsblk"
-    echo "  Puis définir le champ 'disk' dans hosts/$HOST/vars.nix"
-    echo ""
-  fi
-  echo "  Option A — utiliser disko pour partitionner automatiquement :"
-  echo "    nix run github:nix-community/disko -- --mode disko hosts/$HOST/disko.nix"
+  echo "  Option A — déclarative (recommandée) :"
+  echo "      nix run github:nix-community/disko -- --mode disko targets/hosts/$HOST/disko.nix"
   echo ""
-  echo "  Option B — partitionnement manuel (voir docs/manual-install.md pour le détail) :"
-  echo "    gdisk /dev/$DISK     # créer les partitions GPT + EFI"
-  echo "    # Nommage partitions : /dev/${DISK}p1 et /dev/${DISK}p2 (NVMe) ou /dev/${DISK}1 et /dev/${DISK}2 (SATA/virtio)"
-  echo "    mkfs.vfat <partition1>   # ex: /dev/${DISK}p1 ou /dev/${DISK}1"
-  echo "    mkfs.btrfs <partition2>  # ex: /dev/${DISK}p2 ou /dev/${DISK}2"
-  echo "    # créer les subvolumes btrfs et monter"
-else
-  echo "  Pas de disko.nix pour ce host — partitionnement entièrement manuel."
-  echo ""
-  echo "  Exemple de layout recommandé (GPT + EFI + btrfs) :"
-  echo "    gdisk /dev/nvme0n1"
-  echo "      n → partition 1 → +512M → EF00 (EFI)"
-  echo "      n → partition 2 → 100%  → 8300 (Linux)"
-  echo "    mkfs.vfat -F32 /dev/nvme0n1p1"
-  echo "    mkfs.btrfs /dev/nvme0n1p2"
-  echo "    # subvolumes : @, @home, @nix, @var-log"
-  echo "  Voir docs/manual-install.md pour les détails complets."
 fi
-
+echo "  Option B — manuelle :"
+echo "      lsblk"
+echo "      gdisk ${DISK:-/dev/nvme0n1}"
+echo "      mkfs.vfat -F32 <partition-efi>"
+echo "      mkfs.btrfs -f <partition-root>"
+echo "      mount <partition-root> /mnt"
+echo "      btrfs subvolume create /mnt/@"
+echo "      btrfs subvolume create /mnt/@home"
+echo "      btrfs subvolume create /mnt/@nix"
+echo "      btrfs subvolume create /mnt/@var-log"
+echo "      umount /mnt"
 pause
-
-# ---------------------------------------------------------------------------
-# Étape 4 : Montage
-# ---------------------------------------------------------------------------
 
 step "4/9" "Montage des partitions"
-
-echo "  Exemple pour btrfs avec subvolumes :"
-echo ""
-echo "    DISK=/dev/nvme0n1"
-echo "    mount -o subvol=@,compress=zstd,noatime /dev/${DISK}p2 /mnt"
-echo "    mkdir -p /mnt/{boot,home,nix,var/log}"
-echo "    mount /dev/${DISK}p1 /mnt/boot"
-echo "    mount -o subvol=@home,compress=zstd,noatime  /dev/${DISK}p2 /mnt/home"
-echo "    mount -o subvol=@nix,compress=zstd,noatime   /dev/${DISK}p2 /mnt/nix"
-echo "    mount -o subvol=@var-log,compress=zstd,noatime /dev/${DISK}p2 /mnt/var/log"
-echo ""
-echo "  Vérifier : lsblk"
-
+echo "  Exemple btrfs :"
+echo "      DISK=${DISK:-/dev/nvme0n1}"
+echo "      mount -o subvol=@,compress=zstd,noatime \"\${DISK}p2\" /mnt"
+echo "      mkdir -p /mnt/{boot,home,nix,var/log}"
+echo "      mount \"\${DISK}p1\" /mnt/boot"
+echo "      mount -o subvol=@home,compress=zstd,noatime \"\${DISK}p2\" /mnt/home"
+echo "      mount -o subvol=@nix,compress=zstd,noatime \"\${DISK}p2\" /mnt/nix"
+echo "      mount -o subvol=@var-log,compress=zstd,noatime \"\${DISK}p2\" /mnt/var/log"
+echo "      lsblk"
 pause
-
-# ---------------------------------------------------------------------------
-# Étape 5 : Clone du repo
-# ---------------------------------------------------------------------------
 
 step "5/9" "Clone du repo workstation"
-
 echo "  Sur la machine cible :"
+echo "      nix-shell -p git"
+echo "      git clone https://github.com/mikl-974/workstation /root/workstation"
+echo "      cd /root/workstation"
 echo ""
-echo "    nix-shell -p git"
-echo "    git clone https://github.com/mikl-974/workstation /mnt/etc/nixos"
-echo "    # ou cloner ailleurs et pointer le flake :"
-echo "    git clone https://github.com/mikl-974/workstation /root/workstation"
-
+echo "  Si tu n'as pas encore initialisé vars.nix sur la cible :"
+echo "      nix run .#init-host -- $HOST"
+echo "      nix run .#doctor -- --host $HOST"
+echo "      nix run .#validate-install -- $HOST"
 pause
 
-# ---------------------------------------------------------------------------
-# Étape 6 : Génération de la config hardware
-# ---------------------------------------------------------------------------
-
-step "6/9" "Génération de la configuration hardware"
-
-echo "  Générer la configuration hardware spécifique à cette machine :"
+step "6/9" "Configuration hardware et cohérence du host"
+echo "  Générer la configuration hardware si nécessaire :"
+echo "      nixos-generate-config --root /mnt"
 echo ""
-echo "    nixos-generate-config --root /mnt"
-echo ""
-echo "  Cela produit /mnt/etc/nixos/hardware-configuration.nix"
-echo "  Ce fichier peut être copié dans hosts/$HOST/ si nécessaire."
-echo ""
-echo "  Important : si tu utilises disko, le partitionnement est déjà déclaratif."
-echo "  La hardware-config sert surtout à détecter le matériel (CPU, carte réseau, etc.)"
-
+echo "  Vérifier ensuite :"
+echo "      nix run .#show-config -- $HOST"
+echo "      nix run .#validate-install -- $HOST"
 pause
-
-# ---------------------------------------------------------------------------
-# Étape 7 : Installation NixOS
-# ---------------------------------------------------------------------------
 
 step "7/9" "Installation NixOS via le flake"
-
-USERNAME=$(grep -oP 'username\s*=\s*"\K[^"]+' "$HOST_DIR/vars.nix" 2>/dev/null | head -1 || echo "DEFINE_USERNAME")
-
-echo "  Depuis le répertoire du repo cloné :"
+echo "  Depuis /root/workstation :"
+echo "      nixos-install --flake /root/workstation#$HOST --root /mnt"
 echo ""
-echo "    cd /root/workstation   # ou l'emplacement du clone"
-echo "    nixos-install --flake .#$HOST --root /mnt"
-echo ""
-echo "  Username défini dans hosts/$HOST/vars.nix : $USERNAME"
-echo ""
-echo -e "  ${YLW}⚠ Avant de lancer nixos-install :${RST}"
-echo "   • hosts/$HOST/vars.nix : tous les champs sont-ils définis ?"
-echo "   • Valider : nix run .#validate-install -- $HOST"
-
+echo "  Cette étape applique aussi la configuration Home Manager déclarée dans le flake."
 pause
-
-# ---------------------------------------------------------------------------
-# Étape 8 : Reboot
-# ---------------------------------------------------------------------------
 
 step "8/9" "Reboot"
-
-echo "  Démonter et redémarrer :"
+echo "      umount -R /mnt"
+echo "      reboot"
 echo ""
-echo "    umount -R /mnt"
-echo "    reboot"
-echo ""
-echo "  Retirer le support de boot (clé USB) avant le redémarrage."
-
+echo "  Retirer la clé USB avant le redémarrage."
 pause
 
-# ---------------------------------------------------------------------------
-# Étape 9 : Post-install
-# ---------------------------------------------------------------------------
-
-step "9/9" "Vérifications post-installation"
-
-echo "  Après le premier boot, lancer les vérifications :"
+step "9/9" "Premier boot et vérification"
+echo "  Après le redémarrage :"
+echo "      sudo nixos-rebuild switch --flake /root/workstation#$HOST   # si un rebuild est nécessaire"
+echo "      nix run .#post-install-check -- --host $HOST"
 echo ""
-echo "    nix run .#post-install-check"
-echo ""
-echo "  Ou manuellement :"
-echo "    systemctl status tailscaled"
-echo "    systemctl status home-manager-$USERNAME.service  # si applicable"
-echo "    ls -la ~/.config/hypr/"
-echo "    which Hyprland"
-echo ""
-echo "  Pour rebuilder après une modification du repo :"
-echo "    sudo nixos-rebuild switch --flake .#$HOST"
-echo ""
-echo "  Voir docs/bootstrap.md pour le workflow complet."
+echo "  Puis relire :"
+echo "      docs/first-boot.md"
+echo "      docs/bootstrap.md"
 
 echo ""
 echo -e "${GRN}${BLD}=== Guide terminé ===${RST}"

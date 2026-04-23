@@ -1,30 +1,19 @@
 #!/usr/bin/env bash
 # validate-install.sh — Validateur pré-installation workstation
 #
-# Vérifie que la configuration est prête avant de lancer une installation
-# via NixOS Anywhere ou manuellement.
-#
-# Usage :
-#   ./scripts/validate-install.sh <host>
-#   nix run .#validate-install -- <host>
-#
-# Exemple :
-#   ./scripts/validate-install.sh main
+# Vérifie qu'un host est réellement prêt avant installation.
 
 set -euo pipefail
 
 _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# When run via `nix run .#validate-install`, the script lives in /nix/store.
-# In that case, use $PWD (the user must run from the repo root).
-if [[ "$_SCRIPT_DIR" == /nix/store/* ]]; then
-  REPO_ROOT="$PWD"
-else
-  REPO_ROOT="$(cd "$_SCRIPT_DIR/.." && pwd)"
-fi
+# shellcheck source=./lib/workstation-install.sh
+source "$_SCRIPT_DIR/lib/workstation-install.sh"
+REPO_ROOT="$(resolve_repo_root "$_SCRIPT_DIR")"
 
 RED='\033[0;31m'
 GRN='\033[0;32m'
 YLW='\033[1;33m'
+BLD='\033[1m'
 RST='\033[0m'
 
 ERRORS=0
@@ -34,263 +23,321 @@ ok()   { echo -e "  ${GRN}✔${RST}  $*"; }
 fail() { echo -e "  ${RED}✘${RST}  $*"; ERRORS=$(( ERRORS + 1 )); }
 warn() { echo -e "  ${YLW}⚠${RST}  $*"; WARNINGS=$(( WARNINGS + 1 )); }
 
-# ---------------------------------------------------------------------------
-# Argument
-# ---------------------------------------------------------------------------
-
 if [[ $# -lt 1 ]]; then
   echo "Usage: $0 <host>"
-  echo "Hosts disponibles : $(ls "$REPO_ROOT/hosts" | tr '\n' ' ')"
+  echo "Hosts disponibles : $(list_hosts "$REPO_ROOT")"
   exit 1
 fi
 
 HOST="$1"
-HOST_DIR="$REPO_ROOT/hosts/$HOST"
+HOST_DIR="$REPO_ROOT/targets/hosts/$HOST"
+VARS_FILE="$(host_vars_file "$REPO_ROOT" "$HOST")"
+DEFAULT_FILE="$(host_default_file "$REPO_ROOT" "$HOST")"
+DISKO_FILE="$(host_disko_file "$REPO_ROOT" "$HOST")"
+MACHINE_CONTEXT="$(host_machine_context "$REPO_ROOT" "$HOST")"
+SYSTEM=""
+USERNAME=""
+HOSTNAME_VAL=""
+DISK=""
+TIMEZONE=""
+LOCALE=""
+
+print_field_status() {
+  local field="$1"
+  local value="$2"
+  local required_hint="$3"
+
+  if [[ -z "$value" ]]; then
+    fail "vars.nix : champ '${field}' absent${required_hint}"
+  elif is_placeholder_value "$value"; then
+    fail "vars.nix : ${field} non défini ('$value')"
+  else
+    ok "${field} : ${value}"
+  fi
+}
+
+print_disk_status() {
+  local value="$1"
+
+  if [[ -z "$value" ]]; then
+    warn "vars.nix : disk absent — disko est branché, mais NixOS Anywhere reste bloqué tant que le disque réel n'est pas renseigné"
+  elif is_placeholder_value "$value"; then
+    warn "vars.nix : disk non défini ('$value') — remplacer par le vrai disque cible avant NixOS Anywhere"
+  else
+    ok "disk : ${value}"
+    if [[ "$value" == /dev/* ]]; then
+      ok "disk au bon format (/dev/...)"
+    else
+      fail "vars.nix : disk='$value' invalide (attendu : /dev/...)"
+    fi
+  fi
+}
 
 echo ""
-echo "=== Validation pré-installation : host '$HOST' ==="
+echo -e "${BLD}=== Validation pré-installation : host '$HOST' ===${RST}"
 echo ""
 
-# ---------------------------------------------------------------------------
-# 1. Le host existe
-# ---------------------------------------------------------------------------
-
-echo "── Existence du host"
-
-if [[ -d "$HOST_DIR" ]]; then
-  ok "hosts/$HOST/ existe"
+echo -e "${BLD}── Existence du host${RST}"
+if host_exists "$REPO_ROOT" "$HOST"; then
+  ok "targets/hosts/$HOST/ existe"
 else
-  fail "hosts/$HOST/ introuvable — hôtes disponibles : $(ls "$REPO_ROOT/hosts" | tr '\n' ' ')"
+  fail "targets/hosts/$HOST/ introuvable — hôtes disponibles : $(list_hosts "$REPO_ROOT")"
   echo ""
   echo -e "${RED}Validation interrompue : host introuvable.${RST}"
   exit 1
 fi
 
-# ---------------------------------------------------------------------------
-# 2. Fichiers critiques du host
-# ---------------------------------------------------------------------------
-
 echo ""
-echo "── Fichiers critiques du host"
+echo -e "${BLD}── Fichiers critiques du host${RST}"
+for path in "$VARS_FILE|targets/hosts/$HOST/vars.nix" "$DEFAULT_FILE|targets/hosts/$HOST/default.nix"; do
+  file="${path%%|*}"
+  label="${path##*|}"
+  if [[ -f "$file" ]]; then
+    ok "$label existe"
+  else
+    fail "$label manquant"
+  fi
+done
 
-if [[ -f "$HOST_DIR/vars.nix" ]]; then
-  ok "hosts/$HOST/vars.nix existe"
-else
-  fail "hosts/$HOST/vars.nix manquant — initialiser avec : nix run .#init-host -- $HOST"
-fi
-
-if [[ -f "$HOST_DIR/default.nix" ]]; then
-  ok "hosts/$HOST/default.nix existe"
-else
-  fail "hosts/$HOST/default.nix manquant"
-fi
-
-if [[ -f "$HOST_DIR/disko.nix" ]]; then
-  ok "hosts/$HOST/disko.nix existe"
+if host_uses_disko "$REPO_ROOT" "$HOST"; then
+  ok "targets/hosts/$HOST/disko.nix existe"
   HAS_DISKO=true
 else
-  warn "hosts/$HOST/disko.nix absent — partitionnement disko non disponible pour ce host"
-  warn "NixOS Anywhere nécessite un disko.nix. L'installation manuelle reste possible."
+  warn "targets/hosts/$HOST/disko.nix absent — NixOS Anywhere n'est pas disponible pour ce host"
   HAS_DISKO=false
 fi
 
-# ---------------------------------------------------------------------------
-# 3. flake.nix expose bien le host
-# ---------------------------------------------------------------------------
-
 echo ""
-echo "── Exposition du host dans flake.nix"
+echo -e "${BLD}── Exposition dans flake.nix${RST}"
+if [[ -f "$REPO_ROOT/flake.nix" ]]; then
+  ok "flake.nix existe"
+else
+  fail "flake.nix manquant"
+fi
 
-if grep -q "\"$HOST\"" "$REPO_ROOT/flake.nix" || grep -q "$HOST = mkHost" "$REPO_ROOT/flake.nix"; then
+if host_exposed_in_flake "$REPO_ROOT" "$HOST"; then
   ok "flake.nix expose nixosConfigurations.$HOST"
 else
   fail "flake.nix n'expose pas nixosConfigurations.$HOST"
 fi
 
-# ---------------------------------------------------------------------------
-# 4. Lecture de vars.nix
-# ---------------------------------------------------------------------------
-
 echo ""
-echo "── Valeurs dans vars.nix"
-
-VARS_FILE="$HOST_DIR/vars.nix"
-read_var() {
-  grep -E "${1}[[:space:]]*=[[:space:]]*\"" "$VARS_FILE" 2>/dev/null | sed -E 's/.*=[[:space:]]*"([^"]+)".*/\1/' | head -1 || echo ""
-}
-
+echo -e "${BLD}── Valeurs dans vars.nix${RST}"
 if [[ -f "$VARS_FILE" ]]; then
-  USERNAME=$(read_var "username")
-  HOSTNAME_VAL=$(read_var "hostname")
-  DISK=$(read_var "disk")
-  TIMEZONE=$(read_var "timezone")
-  LOCALE=$(read_var "locale")
-  INITIAL_PASSWORD=$(read_var "initialPassword")
+  SYSTEM="$(read_nix_string_var "$VARS_FILE" "system")"
+  USERNAME="$(read_nix_string_var "$VARS_FILE" "username")"
+  HOSTNAME_VAL="$(read_nix_string_var "$VARS_FILE" "hostname")"
+  DISK="$(read_nix_string_var "$VARS_FILE" "disk")"
+  TIMEZONE="$(read_nix_string_var "$VARS_FILE" "timezone")"
+  LOCALE="$(read_nix_string_var "$VARS_FILE" "locale")"
 
-  # username
-  if [[ -z "$USERNAME" ]]; then
-    fail "vars.nix : champ 'username' absent"
-  elif echo "$USERNAME" | grep -qE '^DEFINE_'; then
-    fail "vars.nix : username non défini ('$USERNAME') — remplacer par le nom d'utilisateur réel"
-  else
-    ok "username : $USERNAME"
-  fi
-
-  # hostname
-  if [[ -z "$HOSTNAME_VAL" ]]; then
-    fail "vars.nix : champ 'hostname' absent"
-  elif echo "$HOSTNAME_VAL" | grep -qE '^DEFINE_'; then
-    fail "vars.nix : hostname non défini ('$HOSTNAME_VAL')"
-  else
-    ok "hostname : $HOSTNAME_VAL"
-  fi
-
-  # disk (uniquement si disko.nix est présent)
-  if [[ "$HAS_DISKO" == true ]]; then
-    if [[ -z "$DISK" ]]; then
-      fail "vars.nix : champ 'disk' absent — requis pour disko.nix"
-    elif echo "$DISK" | grep -qE 'DEFINE_DISK|/dev/DEFINE_DISK'; then
-      fail "vars.nix : disk non défini ('$DISK') — lancer 'lsblk' sur la cible et définir le disque réel"
+  print_field_status "system" "$SYSTEM" " — requis (x86_64-linux ou aarch64-linux)"
+  if [[ -n "$SYSTEM" ]] && ! is_placeholder_value "$SYSTEM"; then
+    if is_supported_nixos_system "$SYSTEM"; then
+      ok "system supporté"
     else
-      ok "disk : $DISK"
+      fail "vars.nix : system='$SYSTEM' non supporté (attendu : x86_64-linux ou aarch64-linux)"
     fi
   fi
 
-  # timezone
-  if [[ -z "$TIMEZONE" ]]; then
-    warn "vars.nix : champ 'timezone' absent — valeur par défaut NixOS sera utilisée"
-  elif echo "$TIMEZONE" | grep -qE '^DEFINE_'; then
-    fail "vars.nix : timezone non défini ('$TIMEZONE')"
-  else
-    ok "timezone : $TIMEZONE"
+  print_field_status "username" "$USERNAME" ""
+  if [[ -n "$USERNAME" ]] && ! is_placeholder_value "$USERNAME"; then
+    if [[ "$USERNAME" =~ ^[a-z][a-z0-9_-]*$ ]]; then
+      ok "username valide pour Unix"
+    else
+      fail "vars.nix : username='$USERNAME' invalide (attendu : [a-z][a-z0-9_-]*)"
+    fi
   fi
 
-  # locale
-  if [[ -z "$LOCALE" ]]; then
-    warn "vars.nix : champ 'locale' absent — valeur par défaut NixOS sera utilisée"
-  elif echo "$LOCALE" | grep -qE '^DEFINE_'; then
-    fail "vars.nix : locale non défini ('$LOCALE')"
-  else
-    ok "locale : $LOCALE"
+  print_field_status "hostname" "$HOSTNAME_VAL" ""
+  if [[ -n "$HOSTNAME_VAL" ]] && ! is_placeholder_value "$HOSTNAME_VAL"; then
+    if [[ "$HOSTNAME_VAL" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+      ok "hostname valide"
+    else
+      fail "vars.nix : hostname='$HOSTNAME_VAL' invalide"
+    fi
   fi
 
-  # initialPassword
-  if [[ -z "$INITIAL_PASSWORD" ]]; then
-    warn "vars.nix : champ 'initialPassword' absent — l'utilisateur n'aura pas de mot de passe (connexion par clé SSH seulement)"
-  elif echo "$INITIAL_PASSWORD" | grep -qE '^DEFINE_'; then
-    fail "vars.nix : initialPassword non défini — remplacer 'DEFINE_PASSWORD' par un vrai mot de passe"
-  else
-    ok "initialPassword : (défini)"
+  if [[ "$HAS_DISKO" == true ]]; then
+    print_disk_status "$DISK"
+  elif [[ -n "$DISK" ]] && ! is_placeholder_value "$DISK"; then
+    ok "disk renseigné (utile pour une future migration vers disko)"
   fi
+
+  print_field_status "timezone" "$TIMEZONE" ""
+  print_field_status "locale" "$LOCALE" ""
 else
   fail "vars.nix manquant — impossible de vérifier les valeurs"
 fi
 
-# ---------------------------------------------------------------------------
-# 5. Cohérence hostname
-# ---------------------------------------------------------------------------
-
 echo ""
-echo "── Cohérence hostname"
-
-if [[ -n "${HOSTNAME_VAL:-}" && "$HOSTNAME_VAL" != "$HOST" ]]; then
-  warn "vars.nix : hostname='$HOSTNAME_VAL' diffère de la clé host '$HOST'"
-  warn "Le hostname doit correspondre à la clé nixosConfigurations dans flake.nix"
-elif [[ -n "${HOSTNAME_VAL:-}" ]]; then
-  ok "hostname cohérent avec la clé host"
-fi
-
-# ---------------------------------------------------------------------------
-# 6. Absence de placeholders DEFINE_ dans les fichiers structurants
-# ---------------------------------------------------------------------------
-
-echo ""
-echo "── Absence de placeholders dans les fichiers structurants"
-
-STRUCTURAL_FILES=(
-  "$REPO_ROOT/flake.nix"
-  "$HOST_DIR/default.nix"
-  "$HOST_DIR/disko.nix"
-)
-
-FOUND_IN_STRUCTURAL=0
-for f in "${STRUCTURAL_FILES[@]}"; do
-  if [[ -f "$f" ]]; then
-    rel="${f#"$REPO_ROOT/"}"
-    if grep -q "DEFINE_\|CHANGEME" "$f" 2>/dev/null; then
-      while IFS= read -r match; do
-        fail "Placeholder dans fichier structurant $rel : $match"
-        FOUND_IN_STRUCTURAL=$(( FOUND_IN_STRUCTURAL + 1 ))
-      done < <(grep -n "DEFINE_\|CHANGEME" "$f")
-    fi
-  fi
-done
-
-if [[ $FOUND_IN_STRUCTURAL -eq 0 ]]; then
-  ok "Aucun placeholder dans les fichiers structurants"
-fi
-
-# ---------------------------------------------------------------------------
-# 7. Dotfiles référencés dans home/default.nix
-# ---------------------------------------------------------------------------
-
-echo ""
-echo "── Dotfiles référencés dans home/default.nix"
-
-HOME_FILE="$REPO_ROOT/home/default.nix"
-if [[ -f "$HOME_FILE" ]]; then
-  DOTFILE_REFS=$(grep -oE '\.\./dotfiles/[^"[:space:]]+' "$HOME_FILE" 2>/dev/null \
-    | sed 's|.*/dotfiles/||; s/;$//' || true)
-  if [[ -z "$DOTFILE_REFS" ]]; then
-    ok "Aucun dotfile activé dans home/default.nix (section home.file vide)"
+echo -e "${BLD}── Cohérence du host${RST}"
+if [[ -n "$HOSTNAME_VAL" ]] && ! is_placeholder_value "$HOSTNAME_VAL"; then
+  if [[ "$HOSTNAME_VAL" == "$HOST" ]]; then
+    ok "hostname cohérent avec la clé host"
   else
-    ALL_OK=true
-    while IFS= read -r ref; do
-      target="$REPO_ROOT/dotfiles/$ref"
-      if [[ -e "$target" ]]; then
-        ok "dotfiles/$ref → existe"
-      else
-        fail "dotfiles/$ref référencé dans home/default.nix mais introuvable"
-        ALL_OK=false
-      fi
-    done <<< "$DOTFILE_REFS"
+    fail "hostname='$HOSTNAME_VAL' différent de la clé host '$HOST'"
   fi
-else
-  warn "home/default.nix introuvable — vérification des dotfiles ignorée"
 fi
-
-# ---------------------------------------------------------------------------
-# 8. home/default.nix existe
-# ---------------------------------------------------------------------------
 
 echo ""
-echo "── Fichiers Home Manager"
-
-if [[ -f "$REPO_ROOT/home/default.nix" ]]; then
-  ok "home/default.nix existe"
+echo -e "${BLD}── Contexte machine${RST}"
+if [[ "$MACHINE_CONTEXT" == "virtual-machine" ]]; then
+  ok "profil VM détecté : modules/profiles/virtual-machine.nix"
 else
-  fail "home/default.nix manquant"
+  ok "contexte bare-metal — aucun profil VM détecté"
 fi
 
-# ---------------------------------------------------------------------------
-# Résumé
-# ---------------------------------------------------------------------------
+echo ""
+echo -e "${BLD}── Absence de placeholders dans les fichiers structurants${RST}"
+FOUND_PLACEHOLDERS=0
+for file in \
+  "$REPO_ROOT/flake.nix" \
+  "$VARS_FILE" \
+  "$DEFAULT_FILE" \
+  "$DISKO_FILE" \
+  "$(home_target_file "$REPO_ROOT" "$HOST")"; do
+  [[ -f "$file" ]] || continue
+  rel="${file#"$REPO_ROOT/"}"
+  while IFS= read -r match; do
+    [[ -z "$match" ]] && continue
+    if [[ "$match" == *"/dev/DEFINE_DISK"* && "$file" == "$VARS_FILE" ]]; then
+      warn "Placeholder disque restant dans $rel : $match"
+    else
+      fail "Placeholder dans $rel : $match"
+      FOUND_PLACEHOLDERS=$(( FOUND_PLACEHOLDERS + 1 ))
+    fi
+  done < <(grep -nE 'DEFINE_|CHANGEME' "$file" || true)
+done
+if [[ $FOUND_PLACEHOLDERS -eq 0 ]]; then
+  ok "Aucun placeholder bloquant dans les fichiers structurants"
+fi
+
+echo ""
+echo -e "${BLD}── Dotfiles activés par Home Manager${RST}"
+if [[ -f "$(home_target_file "$REPO_ROOT" "$HOST")" ]]; then
+  ok "home/targets/$HOST.nix existe — composition Home Manager target-specific détectée"
+  DOTFILES_FOUND=0
+  while IFS= read -r relpath; do
+    [[ -z "$relpath" ]] && continue
+    DOTFILES_FOUND=$(( DOTFILES_FOUND + 1 ))
+    if [[ -e "$REPO_ROOT/dotfiles/$relpath" ]]; then
+      ok "dotfiles/$relpath → existe"
+    else
+      fail "dotfiles/$relpath référencé dans home/targets/$HOST.nix ou ses imports mais introuvable"
+    fi
+  done < <(collect_active_dotfiles_for_host "$REPO_ROOT" "$HOST")
+else
+  fail "Aucune composition Home Manager trouvée (home/targets/$HOST.nix manquant)"
+fi
+
+echo ""
+echo -e "${BLD}── Stacks portées par le host${RST}"
+HOST_STACKS=0
+while IFS= read -r stack_name; do
+  [[ -z "$stack_name" ]] && continue
+  HOST_STACKS=$(( HOST_STACKS + 1 ))
+  if [[ -f "$REPO_ROOT/stacks/$stack_name/default.nix" ]]; then
+    ok "stacks/$stack_name/default.nix importé par le host"
+  else
+    fail "stack '$stack_name' importée par le host mais introuvable dans stacks/$stack_name/default.nix"
+  fi
+done < <(grep -RhoE 'stacks/[^[:space:]]+/default\.nix' "$HOST_DIR" \
+  | sed -E 's#.*stacks/([^/]+)/default\.nix#\1#' \
+  | sort -u || true)
+
+if [[ $HOST_STACKS -eq 0 ]]; then
+  ok "aucune stack importée explicitement par ce host"
+fi
+
+if grep -Rhoq 'stacks/openclaw/default\.nix' "$HOST_DIR"; then
+  echo ""
+  echo -e "${BLD}── Readiness OpenClaw minimale${RST}"
+
+  if [[ -f "$REPO_ROOT/stacks/openclaw/env/public.env" ]]; then
+    ok "OpenClaw : stacks/openclaw/env/public.env présent"
+  else
+    fail "OpenClaw : stacks/openclaw/env/public.env manquant"
+  fi
+
+  if grep -q 'bind = "tailnet"' "$DEFAULT_FILE" || grep -q 'default = "tailnet"' "$REPO_ROOT/stacks/openclaw/default.nix"; then
+    ok "OpenClaw : exposition prudente retenue (tailnet-only)"
+  else
+    fail "OpenClaw : aucune posture réseau prudente explicite détectée"
+  fi
+
+  if grep -q 'OPENCLAW_GATEWAY_TOKEN' "$REPO_ROOT/stacks/openclaw/default.nix"; then
+    ok "OpenClaw : secret d'auth gateway réellement consommé au runtime"
+  else
+    fail "OpenClaw : aucun flux réel de secret gateway détecté"
+  fi
+
+  if [[ -f "$REPO_ROOT/secrets/stacks/openclaw.yaml" ]]; then
+    ok "OpenClaw : secret env externe versionné dans secrets/stacks/openclaw.yaml"
+  else
+    warn "OpenClaw : aucun secret env externe versionné — le service minimal peut démarrer, mais Telegram/providers restent volontairement non branchés"
+  fi
+fi
+
+echo ""
+echo -e "${BLD}── Parcours d'installation réellement possible${RST}"
+if [[ -f "$REPO_ROOT/scripts/install-manual.sh" ]]; then
+  ok "fallback manuel disponible : scripts/install-manual.sh"
+else
+  fail "scripts/install-manual.sh manquant"
+fi
+
+if [[ -f "$REPO_ROOT/scripts/post-install-check.sh" ]]; then
+  ok "vérification post-install disponible : scripts/post-install-check.sh"
+else
+  fail "scripts/post-install-check.sh manquant"
+fi
+
+if [[ "$HAS_DISKO" == true ]]; then
+  if grep -q 'hostVars.disk' "$DISKO_FILE"; then
+    ok "disko.nix lit bien le disque depuis hostVars.disk"
+  else
+    fail "targets/hosts/$HOST/disko.nix n'utilise pas hostVars.disk"
+  fi
+
+   if flake_host_uses_disko_module "$REPO_ROOT" "$HOST"; then
+     ok "flake.nix branche disko.nixosModules.disko pour $HOST"
+   else
+     fail "flake.nix n'ajoute pas disko.nixosModules.disko pour $HOST"
+   fi
+
+  if [[ -f "$REPO_ROOT/scripts/install-anywhere.sh" ]]; then
+    if [[ -n "$DISK" ]] && ! is_placeholder_value "$DISK"; then
+      ok "parcours NixOS Anywhere disponible : scripts/install-anywhere.sh"
+    else
+      warn "parcours NixOS Anywhere branché, mais disque réel encore non renseigné dans vars.nix"
+    fi
+    if [[ "$MACHINE_CONTEXT" == "virtual-machine" ]]; then
+      ok "contexte VM explicite — le workflow reste le même, sans host abstrait ni logique cachée"
+    fi
+  else
+    fail "scripts/install-anywhere.sh manquant"
+  fi
+else
+  warn "NixOS Anywhere non disponible pour ce host sans disko.nix"
+fi
 
 echo ""
 echo "=== Résumé ==="
 echo ""
-
 if [[ $ERRORS -eq 0 && $WARNINGS -eq 0 ]]; then
-  echo -e "${GRN}✔ Validation complète : aucune erreur, aucun avertissement.${RST}"
-  echo -e "  La configuration semble prête pour une installation du host '$HOST'."
+  echo -e "${GRN}${BLD}✔ Validation complète : aucune erreur, aucun avertissement.${RST}"
+  echo "  La configuration est prête pour une installation de '$HOST'."
 elif [[ $ERRORS -eq 0 ]]; then
-  echo -e "${YLW}⚠ Validation complète : $WARNINGS avertissement(s), aucune erreur bloquante.${RST}"
-  echo -e "  Vérifie les avertissements avant de lancer l'installation."
+  echo -e "${YLW}${BLD}⚠ Validation complète : $WARNINGS avertissement(s), aucune erreur bloquante.${RST}"
+  echo "  Le parcours reste possible mais doit être relu avant installation."
 else
-  echo -e "${RED}✘ Validation échouée : $ERRORS erreur(s) bloquante(s), $WARNINGS avertissement(s).${RST}"
-  echo -e "  Corrige les erreurs ci-dessus avant de lancer l'installation."
+  echo -e "${RED}${BLD}✘ Validation échouée : $ERRORS erreur(s) bloquante(s), $WARNINGS avertissement(s).${RST}"
+  echo "  Corrige les erreurs ci-dessus avant toute installation."
   echo ""
-  echo -e "  Pour re-initialiser la config : nix run .#init-host -- $HOST"
+  echo "  Raccourcis utiles :"
+  echo "   • Ré-initialiser : nix run .#init-host -- $HOST"
+  echo "   • Diagnostiquer : nix run .#doctor -- --host $HOST"
   exit 1
 fi
 

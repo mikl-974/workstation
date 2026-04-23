@@ -15,8 +15,9 @@ Les editeurs et IDE sont des applications desktop — ils ne vivent pas dans un 
 
 | Couche | Ce qu'elle contient | Localisation |
 |---|---|---|
-| devShell `.NET` | SDK, Docker CLI, outils CLI | `devshells/dotnet.nix` |
-| Applications dev | VS Code, Rider, WebStorm | `modules/apps/editors.nix` |
+| devShell `.NET` | SDK, Docker CLI, outils CLI | `modules/devshells/dotnet.nix` |
+| Applications dev | VS Code, Rider, WebStorm, Neovim, GitKraken | `modules/apps/editors.nix` + `modules/apps/dev.nix` |
+| Containers locaux de dev | Podman + compatibilite Docker locale | `modules/containers/podman.nix` via `modules/profiles/dev.nix` |
 
 Les editeurs sont des applications desktop. Ils sont installes via le profil `dev`
 et disponibles a tout moment sur le poste. Le shell fournit l'environnement dans
@@ -30,7 +31,7 @@ Commande :
 nix develop .#dotnet
 ```
 
-Definition : `devshells/dotnet.nix`.
+Definition : `modules/devshells/dotnet.nix`.
 
 Ce shell est **local a `workstation`**. Il n'est pas consomme depuis `foundation` et ne doit pas y migrer.
 
@@ -44,7 +45,7 @@ Ce shell est **local a `workstation`**. Il n'est pas consomme depuis `foundation
 | `jq` | JSON processing |
 | `openssl` | TLS / PKI |
 | `pkg-config` | Resolution de dependances natives |
-| `docker-client` | Docker CLI (daemon gere par le systeme hote) |
+| `docker-client` | Docker CLI (ici oriente vers Podman quand le profil `dev` est actif) |
 | `playwright` | Automatisation navigateur / tests E2E |
 
 ## Pourquoi les IDEs ne sont plus dans le shell
@@ -53,9 +54,9 @@ VS Code, Rider et WebStorm sont des applications graphiques desktop.
 Les mettre dans un devShell signifiait les telecharger a chaque `nix develop`,
 les rendre indisponibles hors du shell, et melanger deux niveaux differents.
 
-Ils vivent desormais dans `modules/apps/editors.nix` et sont installes en tant
-que paquets systeme via `profiles/dev.nix`. Ils sont toujours disponibles,
-independamment de l'entree dans un shell de dev.
+Ils vivent desormais dans `modules/apps/editors.nix` et `modules/apps/dev.nix`
+et sont installes en tant que paquets systeme via `modules/profiles/dev.nix`.
+Ils sont toujours disponibles, independamment de l'entree dans un shell de dev.
 
 ## Pourquoi ce shell est local a `workstation`
 
@@ -65,9 +66,20 @@ Ils appartiennent au poste de travail, pas au socle partage.
 
 `foundation` ne doit pas connaitre les besoins d'un poste de dev personnel.
 
+## Relation shell `.NET` / Podman
+
+Le shell `.NET` garde le binaire `docker-client`, mais le backend containers local
+est desormais structure cote systeme dans `modules/containers/podman.nix`.
+
+But :
+
+- garder le shell centre sur les outils CLI
+- garder le moteur de containers au niveau systeme
+- fournir une compatibilite Docker utile pour les workflows dev locaux
+
 ## Etendre le shell
 
-Ajouter des outils dans `devshells/dotnet.nix`, section `packages`.
+Ajouter des outils dans `modules/devshells/dotnet.nix`, section `packages`.
 
 Exemples d'extensions :
 
@@ -80,7 +92,10 @@ httpie
 
 ## Ajouter un nouvel editeur / IDE
 
-Ajouter le package dans `modules/apps/editors.nix`, section `environment.systemPackages`.
+Ajouter :
+
+- un editeur / IDE dans `modules/apps/editors.nix`
+- une application dev desktop non-editeur dans `modules/apps/dev.nix`
 
 Exemple :
 
@@ -90,7 +105,7 @@ jetbrains.goland
 
 ## Ajouter un nouveau devShell
 
-1. Creer `devshells/<nom>.nix`
+1. Creer `modules/devshells/<nom>.nix`
 2. L'exposer dans `flake.nix` via `devShells.<system>.<nom>`
 3. Documenter son usage dans ce fichier
 

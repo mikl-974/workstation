@@ -1,57 +1,34 @@
-# dotfiles
+# dotfiles/
 
-`dotfiles/` centralise les configurations applicatives utilisateur de cette workstation.
+Bibliothèque réutilisable de configurations applicatives.
 
-Ces fichiers sont **bruts** — ce ne sont pas des modules Nix. Ils sont gérés et liés via Home Manager (`home/default.nix`).
+## Règle
 
-## Structure
+`dotfiles/` contient uniquement du contenu brut applicatif.
+Le binding se fait dans `home/`.
 
-```
-dotfiles/
-  hypr/        Hyprland (hyprland.conf, keybinds, monitors, rules)
-  foot/        Terminal foot (foot.ini)
-  wofi/        Launcher wofi (config, style.css)
-  shell/       Shell bash (.bashrc, aliases, env)
-  noctalia/    Theme Noctalia (colors.conf, wallpapers, CSS GTK/waybar/foot)
-  editors/     Editeurs (VS Code settings, Rider overrides)
-```
+## Modèle concret actuel
 
-## Regle : ou va chaque config ?
+### Binding moderne sur `main`, `laptop` et `gaming`
+- `home/targets/main.nix` lie `home/users/mikl.nix` avec `home/roles/desktop-hyprland.nix`
+- `home/targets/laptop.nix` lie `home/users/mikl.nix` avec `home/roles/desktop-hyprland.nix`
+- `home/targets/gaming.nix` lie `home/users/mikl.nix` avec `home/roles/desktop-hyprland.nix` et `home/roles/gaming-steam.nix`
+- les dotfiles actifs de `main`, `laptop` et `gaming` restent ceux de la base Hyprland commune
+- aucun chemin legacy implicite n'est nécessaire pour ces targets
 
-| Type de config | Ou ca va |
-|---|---|
-| Parametre systeme NixOS | `modules/` |
-| Activation d'un service ou programme | `modules/` ou `profiles/` |
-| Config utilisateur declarative (shell, git, etc.) | `home/default.nix` via home-manager |
-| Fichier de config brut applicatif (INI, CSS, conf) | `dotfiles/<app>/` |
-| Couleurs / theming Noctalia | `dotfiles/noctalia/` |
+### Base commune par app/domaine
+- `dotfiles/hyprland/hyprland.conf`
+- `dotfiles/hyprland/profiles/default.conf`
+- `dotfiles/terminal/kitty.conf`
+- `dotfiles/terminal/profiles/default-kitty.conf`
+- `dotfiles/themes/noctalia/gtk/settings.ini`
 
-## Comment ranger un nouveau dotfile
+### Overrides user
+- `dotfiles/hyprland/profiles/mfo.conf`
+- `dotfiles/terminal/profiles/dfo-kitty.conf`
 
-1. Identifier l'application : creer `dotfiles/<app>/` si le dossier n'existe pas
-2. Y placer le fichier de configuration brut
-3. L'enregistrer dans `home/default.nix` via `home.file."<destination>".source`
-4. Documenter l'ajout dans `dotfiles/<app>/README.md`
+## Comment ajouter un nouveau dotfile
 
-Exemple dans `home/default.nix` :
-
-```nix
-home.file.".config/foot/foot.ini".source = ../dotfiles/foot/foot.ini;
-```
-
-## Ce qui ne va PAS dans `dotfiles/`
-
-- Les modules NixOS -> `modules/`
-- La logique de profil -> `profiles/`
-- Les secrets -> jamais dans le repo
-- Les fichiers generes automatiquement par des outils
-
-## Integration
-
-Les dotfiles sont appliques lors de `nixos-rebuild switch` (Home Manager est integre au systeme NixOS) :
-
-```bash
-sudo nixos-rebuild switch --flake .#main
-```
-
-Voir `docs/bootstrap.md` pour le workflow complet d'installation.
+1. créer le contenu brut dans `dotfiles/`
+2. le lier depuis un rôle si c'est commun
+3. le surcharger depuis `home/users/<user>.nix` seulement si la différence est réellement spécifique à l'utilisateur

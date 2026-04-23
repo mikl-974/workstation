@@ -1,5 +1,5 @@
 {
-  description = "Personal workstation environments (NixOS, Hyprland, dotfiles, devshells)";
+  description = "Infra monorepo for machines, users, stacks, dotfiles, and reusable Nix modules";
 
   nixConfig = {
     extra-substituters      = [ "https://noctalia.cachix.org" ];
@@ -7,7 +7,7 @@
   };
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
     # Noctalia requires nixpkgs-unstable (latest Quickshell dependency).
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -23,108 +23,186 @@
     };
 
     # Declarative disk partitioning — required for NixOS Anywhere installations.
-    # See docs/nixos-anywhere.md and hosts/main/disko.nix.
+    # See docs/nixos-anywhere.md and targets/hosts/main/disko.nix.
     disko = {
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     # Home Manager — manages user dotfiles and per-user packages.
-    # Pinned to the matching NixOS release branch.
+    # Intentionally kept on the 24.11 release branch for stability while
+    # nixpkgs itself tracks nixos-unstable for package selection.
     home-manager = {
       url = "github:nix-community/home-manager/release-24.11";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    nix-openclaw = {
+      url = "github:openclaw/nix-openclaw";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.home-manager.follows = "home-manager";
+    };
+
+    nix-darwin = {
+      url = "github:nix-darwin/nix-darwin/master";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    nix-homebrew.url = "github:zhaofengli/nix-homebrew";
+
+    # Kept available for future Darwin tap pinning if/when the repo needs it.
+    homebrew-core = {
+      url = "github:homebrew/homebrew-core";
+      flake = false;
+    };
+
+    homebrew-cask = {
+      url = "github:homebrew/homebrew-cask";
+      flake = false;
+    };
   };
 
-  outputs = inputs@{ nixpkgs, foundation, disko, home-manager, noctalia, ... }:
+  outputs = inputs@{ self, nixpkgs, foundation, disko, home-manager, sops-nix, nix-openclaw, nix-darwin, nix-homebrew, noctalia, ... }:
     let
       lib = nixpkgs.lib;
-      systems = [ "x86_64-linux" "aarch64-darwin" "x86_64-darwin" "aarch64-linux" ];
+      systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
 
-      # Foundation NixOS modules consumed by all workstation hosts.
-      # Home Manager user binding is per-host (username lives in hosts/<name>/vars.nix).
+      # Shared building blocks used by all infra NixOS targets.
       sharedModules = [
         foundation.nixosModules.networkingTailscale
         home-manager.nixosModules.home-manager
-        {
-          # Global home-manager settings applied to all hosts.
-          # useGlobalPkgs avoids a second nixpkgs eval per user.
-          home-manager.useGlobalPkgs    = true;
-          home-manager.useUserPackages  = true;
-          # Pass flake inputs to every Home Manager module (needed for noctalia HM module).
-          home-manager.extraSpecialArgs = { inherit inputs; };
-        }
+        sops-nix.nixosModules.sops
+        ./modules/security/sops.nix
       ];
 
+      # Shared building blocks used by Darwin targets.
+      sharedDarwinModules = [
+        nix-homebrew.darwinModules.nix-homebrew
+      ];
+
+      # Each NixOS host must now expose its explicit Home Manager composition
+      # through home/targets/<hostname>.nix.
+      mkHomeUsers = vars:
+        let
+          homeTargetPath = ./. + "/home/targets/${vars.hostname}.nix";
+        in
+        if builtins.pathExists homeTargetPath then
+          import homeTargetPath
+        else
+          throw "missing Home Manager composition for ${vars.hostname}: expected home/targets/${vars.hostname}.nix";
+
       # Build a NixOS host from its vars.nix and host-specific modules.
-      # vars   — attrset imported from hosts/<name>/vars.nix
-      # modules — list of NixOS modules specific to the host
       mkHost = { vars, modules }:
         let
           hostSystem = if vars ? system then vars.system else "x86_64-linux";
         in
         lib.nixosSystem {
-          # hostVars is available to every module in this host as a function argument.
-          specialArgs = { hostVars = vars; inherit inputs; };
-          modules = [
-            { nixpkgs.hostPlatform = hostSystem; }
-            { nixpkgs.config.allowUnfree = true; }
-          ] ++ sharedModules ++ [
-            # Bind the Home Manager config to the username declared in vars.nix.
-            { home-manager.users.${vars.username} = import ./home/default.nix; }
+          system = vars.system or "x86_64-linux";
+          specialArgs = {
+            hostVars = vars;
+            flakeSelf = self;
+            flakeInputs = inputs;
+            inherit inputs;
+          };
+          modules = sharedModules ++ [
+            {
+              home-manager.useGlobalPkgs = true;
+              home-manager.useUserPackages = true;
+              home-manager.extraSpecialArgs = {
+                hostVars = vars;
+                targetName = vars.hostname;
+                inherit inputs;
+              };
+              home-manager.users = mkHomeUsers vars;
+            }
           ] ++ modules;
+        };
+
+      # Build a Darwin host from its vars.nix and host-specific modules.
+      mkDarwinHost = { vars, modules }:
+        nix-darwin.lib.darwinSystem {
+          system = vars.system or "aarch64-darwin";
+          specialArgs = {
+            hostVars = vars;
+            flakeSelf = self;
+            flakeInputs = inputs;
+          };
+          modules = sharedDarwinModules ++ modules;
         };
     in
     {
       nixosConfigurations = {
         main = mkHost {
-          vars   = import ./hosts/main/vars.nix;
-          modules = [ disko.nixosModules.disko ./hosts/main/default.nix ];
+          vars   = import ./targets/hosts/main/vars.nix;
+          modules = [ disko.nixosModules.disko ./targets/hosts/main/default.nix ];
         };
 
         laptop = mkHost {
-          vars   = import ./hosts/laptop/vars.nix;
-          modules = [ ./hosts/laptop/default.nix ];
+          vars   = import ./targets/hosts/laptop/vars.nix;
+          modules = [ disko.nixosModules.disko ./targets/hosts/laptop/default.nix ];
         };
 
         gaming = mkHost {
-          vars   = import ./hosts/gaming/vars.nix;
-          modules = [ ./hosts/gaming/default.nix ];
+          vars   = import ./targets/hosts/gaming/vars.nix;
+          modules = [ disko.nixosModules.disko ./targets/hosts/gaming/default.nix ];
+        };
+
+        openclaw-vm = mkHost {
+          vars   = import ./targets/hosts/openclaw-vm/vars.nix;
+          modules = [ disko.nixosModules.disko ./targets/hosts/openclaw-vm/default.nix ];
+        };
+
+        ms-s1-max = mkHost {
+          vars   = import ./targets/hosts/ms-s1-max/vars.nix;
+          modules = [ ./targets/hosts/ms-s1-max/default.nix ];
         };
       };
 
-      # .NET devShell is defined locally — this is a workstation-specific dev
-      # environment, not a generic shared primitive. See devshells/dotnet.nix.
+      darwinConfigurations = {
+        # Retained as-is for now: it is already the working flake entrypoint and
+        # there is no stronger durable naming signal in the repo yet.
+        macmini = mkDarwinHost {
+          vars = import ./targets/hosts/macmini/vars.nix;
+          modules = [ ./targets/hosts/macmini/default.nix ];
+        };
+      };
+
+      # .NET devShell is defined locally — this is an infra-local dev
+      # environment, not a generic shared primitive. See modules/devshells/dotnet.nix.
       devShells = lib.genAttrs systems (system:
         let pkgs = import nixpkgs { inherit system; };
         in {
-          dotnet = import ./devshells/dotnet.nix { inherit pkgs; };
+          dotnet = import ./modules/devshells/dotnet.nix { inherit pkgs; };
         }
       );
 
       # Installation and validation scripts exposed as nix run .#<name> apps.
       # These scripts orchestrate, verify, and guide — they do not redefine
-      # the configuration, which remains in flake.nix, hosts/, profiles/, and modules/.
+      # the configuration, which remains in flake.nix, targets/hosts/, home/, stacks/, and modules/.
       apps = lib.genAttrs systems (system:
         let pkgs = import nixpkgs { inherit system; };
             # writeTextFile preserves the original shebang (#!/usr/bin/env bash),
             # unlike writeShellScript which prepends #!/bin/sh and breaks BASH_SOURCE.
             mkApp = script: {
               type = "app";
-              program = toString (pkgs.writeTextFile {
-                name       = builtins.baseNameOf script;
+              # Preserve the original shebang so BASH_SOURCE/path resolution
+              # inside the script body keeps behaving like the checked-in file.
+              program = "${pkgs.writeTextFile {
+                name = builtins.baseNameOf script;
+                text = builtins.readFile script;
                 executable = true;
-                text       = ''
-                  #!/usr/bin/env bash
-                  exec bash '${toString script}' "$@"
-                '';
-              });
+              }}";
             };
         in {
           init-host          = mkApp ./scripts/init-host.sh;
           show-config        = mkApp ./scripts/show-config.sh;
           validate-install   = mkApp ./scripts/validate-install.sh;
+          doctor             = mkApp ./scripts/doctor.sh;
           install-anywhere   = mkApp ./scripts/install-anywhere.sh;
           install-manual     = mkApp ./scripts/install-manual.sh;
           post-install-check = mkApp ./scripts/post-install-check.sh;

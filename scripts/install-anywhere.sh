@@ -1,27 +1,12 @@
 #!/usr/bin/env bash
-# install-anywhere.sh — Orchestration de l'installation via NixOS Anywhere
-#
-# Ce script orchestre et vérifie le parcours NixOS Anywhere.
-# Il ne redéfinit pas la configuration — celle-ci reste dans flake.nix et hosts/.
-#
-# Usage :
-#   ./scripts/install-anywhere.sh <host> <target>
-#   nix run .#install-anywhere -- <host> <target>
-#
-# <target> peut être :
-#   192.168.1.50          → se connecte en root@192.168.1.50
-#   root@192.168.1.50     → explicitement root
-#   nixos@orb             → utilisateur non-root : configure root via sudo
-#
-# Exemples :
-#   ./scripts/install-anywhere.sh main 192.168.1.50
-#   ./scripts/install-anywhere.sh main nixos@orb
+# install-anywhere.sh — Orchestration transparente de l'installation via NixOS Anywhere
 
 set -euo pipefail
 
-# ---------------------------------------------------------------------------
-# Couleurs et helpers
-# ---------------------------------------------------------------------------
+_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./lib/workstation-install.sh
+source "$_SCRIPT_DIR/lib/workstation-install.sh"
+REPO_ROOT="$(resolve_repo_root "$_SCRIPT_DIR")"
 
 RED='\033[0;31m'
 GRN='\033[0;32m'
@@ -29,388 +14,163 @@ YLW='\033[1;33m'
 BLD='\033[1m'
 RST='\033[0m'
 
-info()  { echo -e "  ${GRN}✔${RST}  $*"; }
-warn()  { echo -e "  ${YLW}⚠${RST}  $*"; }
-fail()  { echo -e "  ${RED}✘${RST}  $*"; }
-die()   { fail "$@"; exit 1; }
-
-# ---------------------------------------------------------------------------
-# Résolution du répertoire du projet
-# ---------------------------------------------------------------------------
-
-_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [[ -n "${REPO_ROOT:-}" ]]; then
-  REPO_ROOT="${REPO_ROOT}"
-elif [[ "$_SCRIPT_DIR" == /nix/store/* ]]; then
-  REPO_ROOT="$PWD"
-else
-  REPO_ROOT="$(cd "$_SCRIPT_DIR/.." && pwd)"
-fi
-
-# ---------------------------------------------------------------------------
-# Arguments
-# ---------------------------------------------------------------------------
-
 if [[ $# -lt 2 ]]; then
-  echo "Usage: $0 <host> <target>"
-  echo ""
-  echo "  <host>   : nom du host NixOS (sous-dossier de hosts/)"
-  echo "  <target> : [user@]ip-ou-hostname de la machine cible"
-  echo ""
-  echo "Hosts disponibles : $(ls "$REPO_ROOT/hosts" | tr '\n' ' ')"
-  echo ""
-  echo "Exemples :"
-  echo "  $0 main 192.168.1.50          # root direct (live ISO)"
-  echo "  $0 main nixos@orb             # via utilisateur non-root (OrbStack, VM…)"
+  echo "Usage: $0 <host> <ip-cible>"
+  echo "Hosts disponibles : $(list_hosts "$REPO_ROOT")"
   exit 1
 fi
 
 HOST="$1"
-TARGET_RAW="$2"
-
-# Parser user@host
-if [[ "$TARGET_RAW" == *@* ]]; then
-  TARGET_USER="${TARGET_RAW%%@*}"
-  TARGET_HOST="${TARGET_RAW#*@}"
-else
-  TARGET_USER="root"
-  TARGET_HOST="$TARGET_RAW"
-fi
-
-echo ""
-echo -e "${BLD}=== Installation NixOS Anywhere : host '$HOST' → ${TARGET_USER}@${TARGET_HOST} ===${RST}"
-
-# ---------------------------------------------------------------------------
-# 1. Validation préalable
-# ---------------------------------------------------------------------------
-
-echo ""
-echo -e "${BLD}── Étape 1/5 : Validation de la configuration${RST}"
-echo ""
-
+TARGET_IP="$2"
+VARS_FILE="$(host_vars_file "$REPO_ROOT" "$HOST")"
+DOCTOR_SCRIPT="$REPO_ROOT/scripts/doctor.sh"
 VALIDATE_SCRIPT="$REPO_ROOT/scripts/validate-install.sh"
-if [[ -x "$VALIDATE_SCRIPT" ]]; then
-  if ! "$VALIDATE_SCRIPT" "$HOST"; then
-    echo ""
-    die "Validation échouée — corrige les erreurs avant de relancer."
-  fi
-else
-  warn "validate-install.sh introuvable — validation ignorée."
-fi
+MACHINE_CONTEXT="$(host_machine_context "$REPO_ROOT" "$HOST")"
 
-# ---------------------------------------------------------------------------
-# 2. Prérequis locaux
-# ---------------------------------------------------------------------------
+SYSTEM="$(read_nix_string_var "$VARS_FILE" "system")"
+USERNAME="$(read_nix_string_var "$VARS_FILE" "username")"
+DISK="$(read_nix_string_var "$VARS_FILE" "disk")"
 
-echo ""
-echo -e "${BLD}── Étape 2/5 : Vérification des prérequis${RST}"
-echo ""
-
-MISSING=0
 check_cmd() {
-  if command -v "$1" &>/dev/null; then
-    info "$1 disponible"
+  local cmd="$1"
+  local hint="$2"
+  if command -v "$cmd" &>/dev/null; then
+    echo -e "  ${GRN}✔${RST}  $cmd disponible"
   else
-    fail "$1 introuvable — $2"
-    MISSING=$(( MISSING + 1 ))
+    echo -e "  ${RED}✘${RST}  $cmd introuvable — $hint"
+    exit 1
   fi
 }
-check_cmd "nix" "Nix doit être installé avec les flakes activés"
-check_cmd "ssh" "SSH est requis pour accéder à la machine cible"
-
-nix flake --help &>/dev/null 2>&1 && info "nix flakes activés" \
-  || warn "Impossible de vérifier l'activation des flakes"
-
-[[ $MISSING -gt 0 ]] && die "Prérequis manquants — installation annulée."
-
-# Trouver la clé SSH locale
-SSH_PRIVKEY=""
-SSH_PUBKEY_FILE=""
-for kf in "$HOME/.ssh/id_ed25519" "$HOME/.ssh/id_rsa" "$HOME/.ssh/id_ecdsa"; do
-  if [[ -f "$kf" && -f "${kf}.pub" ]]; then
-    SSH_PRIVKEY="$kf"
-    SSH_PUBKEY_FILE="${kf}.pub"
-    break
-  fi
-done
-[[ -z "$SSH_PRIVKEY" ]] && die "Aucune clé SSH dans ~/.ssh/. Génère-en une : ssh-keygen -t ed25519"
-
-# S'assurer que la clé est dans l'agent SSH (évite les demandes de passphrase en boucle)
-KEY_FP=$(ssh-keygen -lf "$SSH_PUBKEY_FILE" 2>/dev/null | awk '{print $2}')
-if ! ssh-add -l 2>/dev/null | grep -q "$KEY_FP"; then
-  warn "Clé $SSH_PRIVKEY absente de l'agent SSH — ajout en cours…"
-  ssh-add "$SSH_PRIVKEY" || die "Impossible d'ajouter la clé à l'agent. Lance 'ssh-add $SSH_PRIVKEY'."
-fi
-info "Clé SSH disponible dans l'agent"
-
-# ---------------------------------------------------------------------------
-# 3. Connectivité SSH
-# ---------------------------------------------------------------------------
 
 echo ""
-echo -e "${BLD}── Étape 3/5 : Vérification de la connectivité SSH${RST}"
+echo -e "${BLD}=== Installation NixOS Anywhere : host '$HOST' → $TARGET_IP ===${RST}"
 echo ""
 
-SSH_BASE="ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new"
-
-echo "  Test de connexion vers ${TARGET_USER}@${TARGET_HOST}…"
-if ! $SSH_BASE "${TARGET_USER}@${TARGET_HOST}" "echo OK" 2>/dev/null | grep -q OK; then
-  die "Impossible de se connecter à ${TARGET_USER}@${TARGET_HOST}.
-  Vérifie : IP correcte ? SSH actif sur la cible ? Utilisateur valide ?"
-fi
-info "SSH ${TARGET_USER}@${TARGET_HOST} accessible"
-
-# ---------------------------------------------------------------------------
-# Établir un accès root fiable pour nixos-anywhere
-#
-# nixos-anywhere a besoin d'un accès SSH root direct avec vrais privilèges.
-#
-# Cas A : TARGET_USER=root                       → on utilise directement
-# Cas B : TARGET_USER≠root, root@host fonctionne → on vérifie les vrais droits
-# Cas C : TARGET_USER≠root, root@host KO         → on configure via sudo + tunnel
-# ---------------------------------------------------------------------------
-
-NA_SSH_TARGET=""
-NA_SSH_EXTRA_OPTS=()
-
-setup_root_key() {
-  # Copie la clé publique locale dans /root/.ssh/authorized_keys via sudo
-  echo "  → Installation de la clé SSH pour root…"
-  $SSH_BASE "${TARGET_USER}@${TARGET_HOST}" "
-    sudo mkdir -p /root/.ssh &&
-    sudo chmod 700 /root/.ssh &&
-    sudo tee /root/.ssh/authorized_keys > /dev/null &&
-    sudo chmod 600 /root/.ssh/authorized_keys
-  " < "$SSH_PUBKEY_FILE" 2>/dev/null \
-    || die "Impossible d'installer la clé SSH pour root (sudo fonctionne ?)"
-}
-
-test_real_root() {
-  # Vérifie que root a les vrais privilèges (accès /dev/)
-  local target="$1"
-  shift
-  ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -o BatchMode=yes \
-      -i "$SSH_PRIVKEY" "$@" "$target" \
-      'test "$(whoami)" = root && test -w /dev/ && echo ROOT_OK' 2>/dev/null | grep -q ROOT_OK
-}
-
-if [[ "$TARGET_USER" == "root" ]]; then
-  # ── Cas A : root direct ──
-  NA_SSH_TARGET="root@${TARGET_HOST}"
-  # Installer la clé locale dans authorized_keys de root pour nixos-anywhere
-  echo "  → Installation de la clé SSH pour root…"
-  $SSH_BASE "root@${TARGET_HOST}" "
-    mkdir -p /root/.ssh && chmod 700 /root/.ssh &&
-    tee /root/.ssh/authorized_keys > /dev/null &&
-    chmod 600 /root/.ssh/authorized_keys
-  " < "$SSH_PUBKEY_FILE" 2>/dev/null \
-    || warn "Impossible d'installer la clé SSH pour root (non critique si déjà présente)"
-  NA_SSH_EXTRA_OPTS+=(-i "$SSH_PRIVKEY")
-
+echo -e "${BLD}── Étape 1/6 : Diagnostic local${RST}"
+if [[ -f "$DOCTOR_SCRIPT" ]]; then
+  bash "$DOCTOR_SCRIPT" --host "$HOST"
 else
-  # ── Cas B ou C ──
-  setup_root_key
-  sleep 1
-
-  if test_real_root "root@${TARGET_HOST}"; then
-    info "root@${TARGET_HOST} accessible avec vrais privilèges"
-    NA_SSH_TARGET="root@${TARGET_HOST}"
-  else
-    # ── Cas C : proxy SSH (OrbStack, etc.) — tunnel nécessaire ──
-    echo "  → root@${TARGET_HOST} n'a pas les vrais privilèges (proxy SSH détecté)"
-    echo "  → Lancement d'un sshd temporaire + tunnel…"
-
-    # Trouver sshd sur la cible
-    SSHD_PATH=$($SSH_BASE "${TARGET_USER}@${TARGET_HOST}" '
-      find /nix/store -maxdepth 3 -name sshd -type f 2>/dev/null | head -1
-      command -v sshd 2>/dev/null || true
-    ' 2>/dev/null | head -1)
-    [[ -z "$SSHD_PATH" ]] && die "sshd introuvable sur la cible"
-
-    # Préparer et démarrer sshd temporaire sur port 22222
-    # Chaque commande sudo séparée pour éviter les problèmes de parsing en heredoc
-    # "|| true" sur chaque appel SSH : OrbStack retourne parfois 255 à la fermeture
-    $SSH_BASE "${TARGET_USER}@${TARGET_HOST}" "sudo mkdir -p /var/empty /tmp/sshd-tmp" 2>/dev/null || true
-    $SSH_BASE "${TARGET_USER}@${TARGET_HOST}" "sudo useradd --system --no-create-home --shell /sbin/nologin sshd 2>/dev/null; true" 2>/dev/null || true
-    $SSH_BASE "${TARGET_USER}@${TARGET_HOST}" "sudo rm -f /tmp/sshd-tmp/host_key /tmp/sshd-tmp/host_key.pub && sudo ssh-keygen -t ed25519 -f /tmp/sshd-tmp/host_key -N ''" 2>/dev/null || true
-    $SSH_BASE "${TARGET_USER}@${TARGET_HOST}" "sudo pkill -f 'sshd.*-p 22222' 2>/dev/null; true" 2>/dev/null || true
-    # Créer le fichier log avec les bonnes permissions AVANT de lancer sshd en sudo
-    $SSH_BASE "${TARGET_USER}@${TARGET_HOST}" "sudo touch /tmp/sshd-tmp/sshd.log && sudo chmod 666 /tmp/sshd-tmp/sshd.log" 2>/dev/null || true
-    sleep 0.3
-    # Lancer sshd en background (nohup pour survivre à la fermeture SSH)
-    # Le "|| true" est indispensable : OrbStack retourne 255 sur les connexions avec &
-    $SSH_BASE "${TARGET_USER}@${TARGET_HOST}" \
-      "nohup sudo '$SSHD_PATH' -p 22222 -D -o PermitRootLogin=yes -o AuthorizedKeysFile=/root/.ssh/authorized_keys -o StrictModes=no -o HostKey=/tmp/sshd-tmp/host_key >> /tmp/sshd-tmp/sshd.log 2>&1 & disown; exit 0" 2>/dev/null || true
-    sleep 1
-    # Vérifier que sshd écoute (connexion séparée pour ne pas être affecté par le 255)
-    SSHD_STATUS=$($SSH_BASE "${TARGET_USER}@${TARGET_HOST}" \
-      "ss -tlnp 2>/dev/null | grep -q ':22222' && echo SSHD_OK || echo SSHD_FAIL" 2>/dev/null || echo SSHD_FAIL)
-    echo "$SSHD_STATUS" | grep -q SSHD_OK \
-      || die "Impossible de démarrer sshd temporaire sur la cible"
-    info "sshd temporaire démarré sur port 22222"
-
-    # Tunnel local:22222 → VM:22222
-    echo "  → Ouverture du tunnel SSH local:22222 → cible:22222…"
-    pkill -f "ssh.*-L 22222:localhost:22222" 2>/dev/null || true
-    sleep 0.3
-    ssh -f -N -o StrictHostKeyChecking=accept-new \
-      -L 22222:localhost:22222 "${TARGET_USER}@${TARGET_HOST}" 2>/dev/null
-    sleep 1
-
-    # Tester root via le tunnel
-    if test_real_root "root@127.0.0.1" -p 22222; then
-      info "root SSH fonctionnel via tunnel local:22222"
-      NA_SSH_TARGET="root@127.0.0.1"
-      NA_SSH_EXTRA_OPTS+=(--ssh-port 22222)
-      NA_SSH_EXTRA_OPTS+=(--ssh-option "StrictHostKeyChecking=no")
-      NA_SSH_EXTRA_OPTS+=(-i "$SSH_PRIVKEY")
-    else
-      die "Impossible de se connecter en root via le tunnel.
-  → Le port 22222 est-il libre ? (lsof -i :22222)
-  → La clé est-elle dans l'agent ? (ssh-add -l)"
-    fi
-  fi
+  echo -e "  ${RED}✘${RST}  scripts/doctor.sh manquant"
+  exit 1
 fi
 
-# ---------------------------------------------------------------------------
-# 4. Points de contrôle
-# ---------------------------------------------------------------------------
-
 echo ""
-echo -e "${BLD}── Étape 4/5 : Points à vérifier avant de continuer${RST}"
-echo ""
-
-DISK=$(grep -E 'disk[[:space:]]*=' "$REPO_ROOT/hosts/$HOST/vars.nix" 2>/dev/null \
-  | sed -E 's/.*=[[:space:]]*"([^"]+)".*/\1/' | head -1 || true)
-USERNAME=$(grep -E 'username[[:space:]]*=' "$REPO_ROOT/hosts/$HOST/vars.nix" 2>/dev/null \
-  | sed -E 's/.*=[[:space:]]*"([^"]+)".*/\1/' | head -1 || true)
-DISK="${DISK:-inconnu}"
-USERNAME="${USERNAME:-inconnu}"
-
-echo -e "  Cible nixos-anywhere   : ${BLD}${NA_SSH_TARGET}${RST}"
-echo -e "  Disque cible (disko)   : ${BLD}$DISK${RST}"
-echo -e "  Utilisateur (home-mgr) : ${BLD}$USERNAME${RST}"
-echo ""
-echo -e "  ${YLW}ATTENTION${RST} : NixOS Anywhere va ${RED}effacer et reformater${RST} le disque $DISK."
-echo "  Assure-toi que c'est bien le bon disque. Lance 'lsblk' sur la cible pour confirmer."
-echo ""
-
-read -rp "  Confirmer l'installation ? [oui/NON] " CONFIRM
-CONFIRM_LOWER=$(echo "$CONFIRM" | tr '[:upper:]' '[:lower:]')
-[[ "$CONFIRM_LOWER" != "oui" ]] && { echo "  Installation annulée."; exit 0; }
-
-# ---------------------------------------------------------------------------
-# 5. Pré-configuration Nix + lancement nixos-anywhere
-# ---------------------------------------------------------------------------
-
-echo ""
-echo -e "${BLD}── Étape 5/5 : Lancement de NixOS Anywhere${RST}"
-echo ""
-
-# Fonction pour exécuter des commandes sur la cible via le canal root validé
-na_ssh() {
-  if [[ "$NA_SSH_TARGET" == "root@127.0.0.1" ]]; then
-    ssh -o StrictHostKeyChecking=no -o BatchMode=yes \
-        -i "$SSH_PRIVKEY" -p 22222 "$NA_SSH_TARGET" "$@"
-  else
-    $SSH_BASE "$NA_SSH_TARGET" "$@"
-  fi
-}
-
-# Pré-configuration Nix (seulement si Nix est présent sur la cible)
-echo "  Vérification de Nix sur la cible…"
-REMOTE_HAS_NIX=false
-if na_ssh 'command -v nix-daemon >/dev/null 2>&1 || test -e /run/current-system/sw/bin/nix-daemon || test -e /nix/var/nix/profiles/default/bin/nix-daemon' 2>/dev/null; then
-  REMOTE_HAS_NIX=true
-  info "Nix détecté sur la cible — pré-configuration du daemon…"
-  na_ssh '
-    set -e
-    CONF=/etc/nix/nix.conf
-    RESOLVED=$(readlink -f "$CONF" 2>/dev/null || echo "$CONF")
-    SNIPPET="trusted-users = root
-download-buffer-size = 524288000"
-    if [ -w "$RESOLVED" ]; then
-      printf "\n%s\n" "$SNIPPET" >> "$RESOLVED"
-    else
-      cp "$RESOLVED" /tmp/nix.conf.patched 2>/dev/null || touch /tmp/nix.conf.patched
-      printf "\n%s\n" "$SNIPPET" >> /tmp/nix.conf.patched
-      mount --bind /tmp/nix.conf.patched "$RESOLVED"
-    fi
-    systemctl restart nix-daemon 2>/dev/null || true
-    # Rendre nix-daemon accessible dans le PATH SSH non-interactif
-    NIX_DAEMON=$(command -v nix-daemon 2>/dev/null \
-      || ls /run/current-system/sw/bin/nix-daemon \
-         /nix/var/nix/profiles/default/bin/nix-daemon 2>/dev/null | head -1 || true)
-    if [ -n "$NIX_DAEMON" ] && [ ! -e /usr/local/bin/nix-daemon ]; then
-      ln -sf "$NIX_DAEMON" /usr/local/bin/nix-daemon 2>/dev/null || true
-    fi
-    echo DONE
-  ' 2>/dev/null | grep -q DONE && info "daemon Nix reconfiguré" \
-    || warn "Reconfiguration Nix non confirmée (non critique)"
+echo -e "${BLD}── Étape 2/6 : Validation du host${RST}"
+if [[ -f "$VALIDATE_SCRIPT" ]]; then
+  bash "$VALIDATE_SCRIPT" "$HOST"
 else
-  info "Nix absent sur la cible — construction en local (Mac → remote copy)"
-  # Préparer l'environnement kexec NixOS pour avoir assez d'espace :
-  # - /tmp → vrai disque (évite "No space left" dans le tmpfs RAM)
-  # - zram swap (augmente la RAM disponible pour les gros builds)
-  echo "  → Préparation de l'environnement kexec (espace disque + swap)…"
-  na_ssh '
-    # /tmp sur le vrai disque si pas déjà fait
-    if df /tmp 2>/dev/null | grep -q tmpfs; then
-      mkdir -p /mnt/tmp
-      mount --bind /mnt/tmp /tmp 2>/dev/null || true
-    fi
-    # zram swap si pas déjà actif
-    if ! swapon --show 2>/dev/null | grep -q zram; then
-      modprobe zram 2>/dev/null || true
-      ZDEV=$(zramctl --find --size 3G 2>/dev/null || echo "")
-      if [ -n "$ZDEV" ]; then
-        mkswap "$ZDEV" >/dev/null 2>&1 && swapon "$ZDEV" 2>/dev/null || true
-      fi
-    fi
-    echo KEXEC_PREP_DONE
-  ' 2>/dev/null | grep -q KEXEC_PREP_DONE \
-    && info "Environnement kexec prêt (espace + swap)" \
-    || warn "Préparation kexec non confirmée (non critique si déjà prête)"
+  echo -e "  ${RED}✘${RST}  scripts/validate-install.sh manquant"
+  exit 1
 fi
 
-# Construire les options nixos-anywhere
-# Si Nix est absent : kexec (phases par défaut) — nixos-anywhere boot un live NixOS sur la cible
-# Si Nix est présent : skip kexec, build-on-remote — la cible a déjà un store Nix utilisable
-NIXOS_ANYWHERE_OPTS=(
-  --flake "path:${REPO_ROOT}#${HOST}"
-  "${NA_SSH_EXTRA_OPTS[@]+"${NA_SSH_EXTRA_OPTS[@]}"}"
-)
-if [[ "$REMOTE_HAS_NIX" == true ]]; then
-  NIXOS_ANYWHERE_OPTS+=(--build-on remote --phases disko,install)
-  info "Mode : build-on-remote + skip kexec (Nix présent sur la cible)"
-else
-  # Kexec : nixos-anywhere boot un live NixOS sur la cible, puis installe.
-  # On ne passe PAS --build-on remote car le kexec env a peu de RAM et
-  # son daemon Nix n'accepte pas nos settings → build local sur le Mac.
-  info "Mode : kexec (Nix absent — construction locale Mac → copie remote)"
+if ! host_uses_disko "$REPO_ROOT" "$HOST"; then
+  echo ""
+  echo -e "${RED}✘ Ce host n'a pas de disko.nix : NixOS Anywhere n'est pas disponible.${RST}"
+  echo "  Utiliser le fallback : nix run .#install-manual -- --host $HOST"
+  exit 1
+fi
+
+if [[ -z "$DISK" ]] || is_placeholder_value "$DISK"; then
+  echo ""
+  echo -e "${RED}✘ Le host '$HOST' a bien un disko.nix, mais le vrai disque cible n'est pas encore renseigné dans targets/hosts/$HOST/vars.nix.${RST}"
+  echo "  Vérifie le disque réel sur la machine cible avec 'lsblk', renseigne le champ 'disk', puis relance :"
+  echo "    nix run .#validate-install -- $HOST"
+  exit 1
 fi
 
 echo ""
+echo -e "${BLD}── Étape 3/6 : Prérequis locaux${RST}"
+check_cmd "nix" "Nix avec flakes est requis"
+check_cmd "ssh" "SSH est requis pour joindre la cible"
+check_cmd "ssh-keyscan" "nécessaire pour lire la clé hôte avant connexion"
+check_cmd "ssh-keygen" "nécessaire pour afficher l'empreinte de la clé hôte"
+
+if ! (cd "$REPO_ROOT" && nix flake show . --all-systems --no-write-lock-file >/dev/null); then
+  echo -e "  ${RED}✘${RST}  Le flake n'est pas lisible par nix"
+  exit 1
+fi
+echo -e "  ${GRN}✔${RST}  Flake lisible"
+
+echo ""
+echo -e "${BLD}── Étape 4/6 : Vérification de la clé SSH et de la connectivité${RST}"
+TMP_KNOWN_HOSTS="$(mktemp)"
+trap 'rm -f "$TMP_KNOWN_HOSTS"' EXIT
+
+if ! ssh-keyscan -T 10 "$TARGET_IP" > "$TMP_KNOWN_HOSTS" 2>/dev/null; then
+  echo -e "  ${RED}✘${RST}  Impossible de récupérer la clé SSH de $TARGET_IP"
+  echo "  Vérifie que la cible est bootée, joignable et que SSH est actif."
+  exit 1
+fi
+
+if [[ ! -s "$TMP_KNOWN_HOSTS" ]]; then
+  echo -e "  ${RED}✘${RST}  Aucune clé SSH récupérée depuis $TARGET_IP"
+  exit 1
+fi
+
+echo "  Empreintes récupérées pour $TARGET_IP :"
+ssh-keygen -lf "$TMP_KNOWN_HOSTS" | sed 's/^/    /'
+echo ""
+echo "  Vérifie ces empreintes sur la machine cible avant de continuer :"
+echo "    ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub"
+echo "    ssh-keygen -lf /etc/ssh/ssh_host_rsa_key.pub"
+echo ""
+read -rp "  Faire confiance à cette clé hôte pour $TARGET_IP ? [oui/NON] " TRUST_HOST
+if [[ "${TRUST_HOST,,}" != "oui" ]]; then
+  echo "  Installation annulée."
+  exit 0
+fi
+
+if ssh -o ConnectTimeout=10 -o BatchMode=yes -o StrictHostKeyChecking=yes \
+       -o UserKnownHostsFile="$TMP_KNOWN_HOSTS" \
+       "root@$TARGET_IP" "echo OK" &>/dev/null; then
+  echo -e "  ${GRN}✔${RST}  SSH root@$TARGET_IP accessible"
+else
+  echo -e "  ${RED}✘${RST}  Impossible de se connecter à root@$TARGET_IP"
+  echo "  Vérifications utiles :"
+  echo "   • la machine cible est bootée sur un live ISO NixOS"
+  echo "   • systemctl status sshd sur la cible"
+  echo "   • mot de passe root ou clé SSH configurés"
+  exit 1
+fi
+
+echo ""
+echo -e "${BLD}── Étape 5/6 : Récapitulatif opératoire${RST}"
+echo "  Host attr     : $HOST"
+echo "  Contexte      : $MACHINE_CONTEXT"
+echo "  Système       : ${SYSTEM:-inconnu}"
+echo "  Username      : ${USERNAME:-inconnu}"
+echo "  Disque cible  : ${DISK:-inconnu}"
+echo "  Cible SSH     : root@$TARGET_IP"
+echo "  Flake         : .#$HOST"
+echo ""
+if [[ "$MACHINE_CONTEXT" == "virtual-machine" ]]; then
+  echo "  Note VM       : le profil VM signale le contexte guest, mais ne choisit ni le disque, ni le firmware, ni l'hyperviseur."
+  echo ""
+fi
+echo -e "  ${YLW}ATTENTION${RST} : le disque ${DISK:-inconnu} sera effacé et reformaté."
+echo "  Confirme le disque avec 'lsblk' sur la machine cible avant de continuer."
+echo ""
+read -rp "  Lancer l'installation NixOS Anywhere pour '$HOST' sur $TARGET_IP ? [oui/NON] " CONFIRM
+if [[ "${CONFIRM,,}" != "oui" ]]; then
+  echo "  Installation annulée."
+  exit 0
+fi
+
+echo ""
+echo -e "${BLD}── Étape 6/6 : Lancement de NixOS Anywhere${RST}"
 echo "  Commande :"
-echo -e "  ${BLD}nix run nixpkgs#nixos-anywhere -- ${NIXOS_ANYWHERE_OPTS[*]} $NA_SSH_TARGET${RST}"
+echo -e "  ${BLD}nix run nixpkgs#nixos-anywhere -- --flake .#$HOST root@$TARGET_IP${RST}"
 echo ""
-
 cd "$REPO_ROOT"
-nix run nixpkgs#nixos-anywhere -- "${NIXOS_ANYWHERE_OPTS[@]}" "$NA_SSH_TARGET"
-
-# ---------------------------------------------------------------------------
-# Résumé
-# ---------------------------------------------------------------------------
-
-# Nettoyage tunnel
-pkill -f "ssh.*-L 22222:localhost:22222" 2>/dev/null || true
+nix run nixpkgs#nixos-anywhere -- --flake ".#$HOST" "root@$TARGET_IP"
 
 echo ""
 echo -e "${GRN}${BLD}=== Installation terminée ===${RST}"
 echo ""
 echo "  Prochaines étapes :"
 echo "   1. Attendre le reboot de la machine cible"
-echo "   2. Se reconnecter : ssh $USERNAME@$TARGET_HOST"
-echo "   3. Vérifier : nix run .#post-install-check"
-echo "   4. Si nécessaire : sudo nixos-rebuild switch --flake .#$HOST"
+echo "   2. Se connecter avec l'utilisateur '${USERNAME:-attendu}'"
+echo "   3. Relire : docs/first-boot.md"
+echo "   4. Vérifier : nix run .#post-install-check -- --host $HOST"
+echo "   5. Si besoin : sudo nixos-rebuild switch --flake .#$HOST"
 echo ""

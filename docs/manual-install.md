@@ -6,6 +6,18 @@ Il couvre le cas où NixOS Anywhere n'est pas utilisé ou pas disponible.
 Référence rapide : `docs/install-checklist.md`
 Parcours NixOS Anywhere : `docs/nixos-anywhere.md`
 
+## Bare metal vs VM
+
+Le parcours manuel ne crée pas de branche d'architecture séparée pour les VMs :
+- le host reste concret dans `targets/hosts/`
+- le contexte VM se déclare via `modules/profiles/virtual-machine.nix`
+- le disque, le firmware et le réseau restent ceux du target concret
+
+Autrement dit :
+- la VM est un profil réutilisable
+- pas un host abstrait
+- pas un mode d'installation distinct
+
 ---
 
 ## Prérequis
@@ -66,10 +78,10 @@ Depuis la machine hôte : `ssh root@<IP-CIBLE>`
 
 ## 3. Partitionnement et formatage
 
-### Option A — Utiliser disko (recommandé si disko.nix est disponible)
+### Option A — Utiliser disko (recommandé si `disko.nix` est disponible)
 
-La machine `main` dispose d'un `hosts/main/disko.nix` qui déclare le layout disque complet.
-Le disque cible est lu depuis `hosts/main/vars.nix` (champ `disk`).
+Les hosts `main`, `laptop` et `gaming` disposent d'un `targets/hosts/<host>/disko.nix` qui déclare le layout disque complet.
+Le disque cible est lu depuis `targets/hosts/<host>/vars.nix` (champ `disk`).
 
 - Partition EFI 512 MiB
 - Partition btrfs couvrant le reste, avec subvolumes :
@@ -83,7 +95,7 @@ Le disque cible est lu depuis `hosts/main/vars.nix` (champ `disk`).
 Lancer disko :
 
 ```bash
-nix run github:nix-community/disko -- --mode disko hosts/main/disko.nix
+nix run github:nix-community/disko -- --mode disko targets/hosts/<host>/disko.nix
 ```
 
 disko partitionne, formate et monte automatiquement.
@@ -168,24 +180,27 @@ cd /root/workstation
 
 ## 6. Préparer la configuration machine
 
-**C'est le seul fichier à éditer.** Toutes les valeurs spécifiques à la machine sont centralisées dans `hosts/<name>/vars.nix`.
+**C'est le seul fichier à éditer.** Toutes les valeurs spécifiques à la machine sont centralisées dans `targets/hosts/<name>/vars.nix`.
+
+Le contexte `virtual-machine` n'est pas déclaré ici : il reste modélisé par les imports du host concret.
 
 ### Option A — Initialisation interactive
 
 ```bash
-nix run .#init-host -- main
+nix run .#init-host -- <host>
 ```
 
-Ce script pose les questions et génère `hosts/main/vars.nix`.
+Ce script pose les questions et génère `targets/hosts/<host>/vars.nix`.
 
 ### Option B — Édition directe
 
-Ouvrir `hosts/main/vars.nix` et renseigner les valeurs :
+Ouvrir `targets/hosts/<host>/vars.nix` et renseigner les valeurs :
 
 ```nix
 {
+  system   = "x86_64-linux";   # plateforme NixOS du host
   username = "mikl";           # nom d'utilisateur système
-  hostname = "main";           # doit correspondre à la clé nixosConfigurations
+  hostname = "<host>";         # doit correspondre à la clé nixosConfigurations
   disk     = "/dev/nvme0n1";   # vérifier avec lsblk sur la machine cible
   timezone = "Europe/Paris";
   locale   = "fr_FR.UTF-8";
@@ -195,10 +210,17 @@ Ouvrir `hosts/main/vars.nix` et renseigner les valeurs :
 ### Valider la configuration
 
 ```bash
-nix run .#validate-install -- main
+nix run .#doctor -- --host <host>
+```
+
+Puis :
+
+```bash
+nix run .#validate-install -- <host>
 ```
 
 Ce script vérifie que `vars.nix` est complet, que tous les fichiers critiques existent, et qu'aucun placeholder ne subsiste dans les fichiers structurants.
+Il affiche aussi le contexte machine détecté (`bare-metal` ou `virtual-machine`).
 
 ---
 
@@ -207,7 +229,7 @@ Ce script vérifie que `vars.nix` est complet, que tous les fichiers critiques e
 Depuis le répertoire du repo cloné :
 
 ```bash
-nixos-install --flake /root/workstation#main --root /mnt
+nixos-install --flake /root/workstation#<host> --root /mnt
 ```
 
 Si la configuration hardware est nécessaire, la générer d'abord :
@@ -215,7 +237,7 @@ Si la configuration hardware est nécessaire, la générer d'abord :
 ```bash
 nixos-generate-config --root /mnt
 # Vérifier /mnt/etc/nixos/hardware-configuration.nix
-# L'intégrer dans hosts/main/default.nix si des détecteurs matériels sont nécessaires
+# L'intégrer dans targets/hosts/<host>/default.nix si des détecteurs matériels sont nécessaires
 ```
 
 ---
@@ -242,35 +264,36 @@ Se connecter avec l'utilisateur défini dans `vars.nix`, puis vérifier :
 nixos-rebuild list-generations
 
 # Rebuilder si nécessaire
-sudo nixos-rebuild switch --flake /root/workstation#main
+sudo nixos-rebuild switch --flake /root/workstation#<host>
 
-# Vérifier les symlinks Home Manager
-ls -la ~/.config/hypr/
-ls -la ~/.config/foot/
+# Vérifier l'état général
+nix run .#post-install-check -- --host <host>
 ```
 
 ---
 
 ## 10. Dotfiles
 
-Les dotfiles sont gérés par Home Manager via `home/default.nix`.
+Les dotfiles sont gérés par Home Manager via la composition Home Manager active (`home/targets/<host>.nix`).
 
 Pour activer un dotfile :
 
 1. Placer le fichier dans `dotfiles/<app>/`
-2. L'enregistrer dans `home/default.nix` :
+2. L'enregistrer dans la composition Home Manager active (`home/targets/<host>.nix`) :
 
    ```nix
-   home.file.".config/hypr/hyprland.conf".source = ../dotfiles/hypr/hyprland.conf;
+   home.file.".config/hypr/hyprland.conf".source = ../dotfiles/hyprland/hyprland.conf;
    ```
 
 3. Rebuilder :
 
    ```bash
-   sudo nixos-rebuild switch --flake .#main
+   sudo nixos-rebuild switch --flake .#<host>
    ```
 
 Les symlinks sont créés dans `~/.config/` automatiquement.
+
+Voir aussi `docs/first-boot.md` pour les vérifications concrètes de premier login.
 
 ---
 
@@ -279,7 +302,7 @@ Les symlinks sont créés dans `~/.config/` automatiquement.
 Lancer le script de vérification post-install :
 
 ```bash
-nix run .#post-install-check
+nix run .#post-install-check -- --host <host>
 ```
 
 Ou manuellement :
@@ -310,13 +333,13 @@ nix develop .#dotnet --command dotnet --version
 
 ```bash
 # Local
-sudo nixos-rebuild switch --flake .#main
+sudo nixos-rebuild switch --flake .#<host>
 
 # Depuis n'importe où (avec le flake GitHub)
-sudo nixos-rebuild switch --flake github:mikl-974/workstation#main
+sudo nixos-rebuild switch --flake github:mikl-974/workstation#<host>
 
 # À distance
-nixos-rebuild switch --flake github:mikl-974/workstation#main \
+nixos-rebuild switch --flake github:mikl-974/workstation#<host> \
   --target-host mikl@<IP-MACHINE> --use-remote-sudo
 ```
 
@@ -330,10 +353,11 @@ nixos-rebuild switch --flake github:mikl-974/workstation#main \
 | Connexion Wi-Fi | `wpa_supplicant -B -i wlan0 -c <(wpa_passphrase SSID PASS)` |
 | SSH live | `systemctl start sshd && passwd root` |
 | Disques | `lsblk` |
-| Initialiser vars.nix | `nix run .#init-host -- main` |
-| Partitionnement disko | `nix run github:nix-community/disko -- --mode disko hosts/main/disko.nix` |
+| Initialiser vars.nix | `nix run .#init-host -- <host>` |
+| Doctor | `nix run .#doctor -- --host <host>` |
+| Partitionnement disko | `nix run github:nix-community/disko -- --mode disko targets/hosts/<host>/disko.nix` |
 | Clone repo | `git clone https://github.com/mikl-974/workstation` |
-| Validation pré-install | `nix run .#validate-install -- main` |
-| Installation | `nixos-install --flake /root/workstation#main --root /mnt` |
-| Rebuild | `sudo nixos-rebuild switch --flake .#main` |
-| Post-install check | `nix run .#post-install-check` |
+| Validation pré-install | `nix run .#validate-install -- <host>` |
+| Installation | `nixos-install --flake /root/workstation#<host> --root /mnt` |
+| Rebuild | `sudo nixos-rebuild switch --flake .#<host>` |
+| Post-install check | `nix run .#post-install-check -- --host <host>` |

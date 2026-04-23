@@ -56,10 +56,6 @@ home_target_file() {
   printf '%s/home/targets/%s.nix\n' "$1" "$2"
 }
 
-home_fallback_file() {
-  printf '%s/home/users/default.nix\n' "$1"
-}
-
 host_exists() {
   local repo_root="$1"
   local host="$2"
@@ -173,8 +169,6 @@ list_home_nix_files_for_host() {
   __home_nix_visited=()
   if [[ -f "$target_file" ]]; then
     _collect_home_nix_tree_recursive "$target_file"
-  else
-    _collect_home_nix_tree_recursive "$(home_fallback_file "$repo_root")"
   fi
 }
 
@@ -198,8 +192,6 @@ list_home_nix_files_for_host_user() {
       return 0
     fi
   fi
-
-  _collect_home_nix_tree_recursive "$(home_fallback_file "$repo_root")"
 }
 
 collect_active_dotfiles_for_host() {

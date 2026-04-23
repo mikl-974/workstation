@@ -44,7 +44,6 @@ echo ""
 echo -e "${BLD}── Repo et fichiers critiques${RST}"
 for path in \
   "$REPO_ROOT/flake.nix|flake.nix" \
-  "$REPO_ROOT/home/users/default.nix|home/users/default.nix" \
   "$REPO_ROOT/scripts/init-host.sh|scripts/init-host.sh" \
   "$REPO_ROOT/scripts/validate-install.sh|scripts/validate-install.sh" \
   "$REPO_ROOT/scripts/doctor.sh|scripts/doctor.sh" \
@@ -129,8 +128,6 @@ if [[ -n "$HOST" ]]; then
 
   if [[ -f "$(home_target_file "$REPO_ROOT" "$HOST")" ]]; then
     ok "home/targets/$HOST.nix existe — composition Home Manager moderne détectée"
-  elif [[ -f "$(home_fallback_file "$REPO_ROOT")" ]]; then
-    warn "home/targets/$HOST.nix absent — fallback legacy home/users/default.nix encore utilisé"
   else
     fail "Aucune composition Home Manager trouvée pour '$HOST'"
   fi

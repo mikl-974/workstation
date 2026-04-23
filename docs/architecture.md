@@ -36,9 +36,10 @@ Il ne devient pas un faux host NixOS.
 
 ## NixOS moderne actuel
 
-Trois targets NixOS réels valident maintenant le modèle moderne :
+Quatre targets NixOS réels valident maintenant le modèle moderne :
 - `main` en mono-user explicite
 - `laptop` en mono-user explicite
+- `gaming` en mono-user explicite
 - `ms-s1-max` en multi-user explicite
 
 ### `main`
@@ -53,7 +54,13 @@ Trois targets NixOS réels valident maintenant le modèle moderne :
 - identité user : `home/users/mikl.nix`
 - rôle réutilisable : `home/roles/desktop-hyprland.nix`
 
-`main` et `laptop` ne dépendent plus du fallback `home/users/default.nix`.
+### `gaming`
+- host concret : `targets/hosts/gaming/`
+- composition Home Manager : `home/targets/gaming.nix`
+- identité user : `home/users/mikl.nix`
+- rôles réutilisables : `home/roles/desktop-hyprland.nix`, `home/roles/gaming-steam.nix`
+
+`main`, `laptop` et `gaming` ne dépendent plus d'aucun fallback Home Manager.
 
 ## Users normalisés
 
@@ -94,6 +101,6 @@ Le premier flux réel branché utilise `sops-nix` pour `ms-s1-max` :
 
 ## Legacy
 
-`home/users/default.nix` reste un fallback de compatibilité pour les anciens hosts NixOS.
-Il ne couvre plus que `gaming`.
-Ce n'est plus le chemin de `main`, ni de `laptop`, ni de `ms-s1-max`, et cela ne joue aucun rôle dans le target Darwin `macmini`.
+Le fallback `home/users/default.nix` a été retiré.
+Les hosts NixOS utilisent maintenant tous un binding explicite dans `home/targets/`.
+Le target Darwin `macmini` reste séparé de cette logique Home Manager NixOS.

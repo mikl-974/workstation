@@ -66,8 +66,21 @@ aucun `home/targets/<host>.nix`.
   - `dotfiles/launchers/style.css`
   - `dotfiles/notifications/config`
 
+## Cas `gaming`
+
+### `mikl`
+- rôles : Hyprland, gaming-steam
+- identité : `home/users/mikl.nix`
+- affectation : `home/targets/gaming.nix`
+- dotfiles réellement actifs :
+  - `dotfiles/hyprland/hyprland.conf`
+  - `dotfiles/hyprland/profiles/default.conf`
+  - `dotfiles/terminal/foot.ini`
+  - `dotfiles/launchers/config`
+  - `dotfiles/launchers/style.css`
+  - `dotfiles/notifications/config`
+
 ## Legacy
 
-`home/users/default.nix` reste seulement pour les hosts non migrés.
-`main`, `laptop` et `ms-s1-max` n'en dépendent plus ; il ne couvre plus que `gaming`.
-Les nouveaux bindings doivent partir de `home/targets/`.
+Le fallback `home/users/default.nix` a été retiré.
+Tous les nouveaux bindings passent désormais par `home/targets/`.

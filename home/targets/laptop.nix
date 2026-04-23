@@ -1,7 +1,7 @@
 # Home Manager composition for the concrete target `laptop`.
 #
 # This host is a simple mono-user target: one normalized user identity and one
-# reusable desktop role, with no fallback to home/users/default.nix.
+# reusable desktop role in one explicit target composition.
 {
   mikl = {
     imports = [

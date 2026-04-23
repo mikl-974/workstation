@@ -149,7 +149,7 @@ modules/profiles/       profils assembles par les targets (desktop-hyprland, dev
 modules/                modules Nix
 home/targets/main.nix   composition Home Manager de `main`
 home/users/mikl.nix     identité utilisateur de `main`
-home/users/default.nix  fallback legacy temporaire pour les hosts non migrés
+home/targets/<host>.nix composition Home Manager explicite par host
 dotfiles/               fichiers de configuration bruts
 scripts/                init-host, show-config, doctor, validate-install, install-anywhere, install-manual, post-install-check
 templates/host-vars.nix template de vars.nix pour un nouveau host

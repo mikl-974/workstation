@@ -44,6 +44,7 @@ Exemples réels :
 - `home/users/mikl.nix` = identité du user de `main`
 - `home/targets/main.nix` = composition finale de `main`
 - `home/targets/laptop.nix` = composition finale de `laptop`
+- `home/targets/gaming.nix` = composition finale de `gaming`
 - `home/targets/ms-s1-max.nix` = composition finale de `ms-s1-max`
 
 ### `dotfiles/`

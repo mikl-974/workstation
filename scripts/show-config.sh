@@ -94,8 +94,6 @@ echo -e "${BLD}── Composition Home Manager${RST}"
 echo ""
 if [[ -f "$(home_target_file "$REPO_ROOT" "$HOST")" ]]; then
   echo -e "  ${GRN}✔${RST}  home/targets/$HOST.nix"
-elif [[ -f "$(home_fallback_file "$REPO_ROOT")" ]]; then
-  echo -e "  ${YLW}⚠${RST}  fallback legacy : home/users/default.nix"
 else
   echo -e "  ${RED}✘${RST}  aucune composition Home Manager trouvée"
 fi

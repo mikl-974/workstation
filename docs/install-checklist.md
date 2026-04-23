@@ -101,5 +101,5 @@ Pour les détails, voir `docs/manual-install.md` ou `docs/nixos-anywhere.md`.
 | Champ DEFINE_ restant | Compléter `targets/hosts/<hostname>/vars.nix`, relancer `nix run .#validate-install -- <hostname>` |
 | Rebuild échoue | Vérifier les erreurs Nix, corriger `targets/hosts/<hostname>/vars.nix` ou `targets/` |
 | Home Manager non appliqué | Vérifier que le username dans `vars.nix` correspond à l'utilisateur système |
-| Dotfiles absents | Vérifier la composition Home Manager active (`home/targets/<host>.nix` ou, en compatibilité, `home/users/default.nix`) — les entrées doivent pointer vers des fichiers existants |
+| Dotfiles absents | Vérifier la composition Home Manager active (`home/targets/<host>.nix`) — les entrées doivent pointer vers des fichiers existants |
 | Service manquant | Vérifier que le profil correspondant est importé dans `targets/hosts/<hostname>/default.nix` |

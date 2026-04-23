@@ -177,8 +177,7 @@ for file in \
   "$VARS_FILE" \
   "$DEFAULT_FILE" \
   "$DISKO_FILE" \
-  "$(home_target_file "$REPO_ROOT" "$HOST")" \
-  "$(home_fallback_file "$REPO_ROOT")"; do
+  "$(home_target_file "$REPO_ROOT" "$HOST")"; do
   [[ -f "$file" ]] || continue
   rel="${file#"$REPO_ROOT/"}"
   while IFS= read -r match; do
@@ -205,24 +204,8 @@ if [[ -f "$(home_target_file "$REPO_ROOT" "$HOST")" ]]; then
       fail "dotfiles/$relpath référencé dans home/targets/$HOST.nix ou ses imports mais introuvable"
     fi
   done < <(collect_active_dotfiles_for_host "$REPO_ROOT" "$HOST")
-elif [[ -f "$(home_fallback_file "$REPO_ROOT")" ]]; then
-  ok "home/users/default.nix existe — fallback legacy disponible"
-  DOTFILES_FOUND=0
-  while IFS= read -r relpath; do
-    [[ -z "$relpath" ]] && continue
-    DOTFILES_FOUND=$(( DOTFILES_FOUND + 1 ))
-    if [[ -e "$REPO_ROOT/dotfiles/$relpath" ]]; then
-      ok "dotfiles/$relpath → existe"
-    else
-      fail "dotfiles/$relpath référencé dans home/users/default.nix ou ses imports mais introuvable"
-    fi
-  done < <(collect_active_dotfiles_for_host "$REPO_ROOT" "$HOST")
-
-  if [[ $DOTFILES_FOUND -eq 0 ]]; then
-    warn "Aucun dotfile actif détecté dans la composition Home Manager"
-  fi
 else
-  fail "Aucune composition Home Manager trouvée (ni home/targets/$HOST.nix, ni fallback home/users/default.nix)"
+  fail "Aucune composition Home Manager trouvée (home/targets/$HOST.nix manquant)"
 fi
 
 echo ""

@@ -10,7 +10,7 @@
 #   nix run .#init-host -- gaming
 {
   system   = "x86_64-linux";    # NixOS platform
-  username = "DEFINE_USERNAME"; # system username — must be a valid Unix username
+  username = "mikl";            # primary interactive user of the gaming workstation
   hostname = "gaming";          # hostname — matches nixosConfigurations key in flake.nix
   timezone = "Europe/Paris";    # see: timedatectl list-timezones
   locale   = "fr_FR.UTF-8";    # system locale

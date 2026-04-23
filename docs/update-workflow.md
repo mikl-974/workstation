@@ -29,7 +29,7 @@ Le cycle normal est :
 Home Manager est integre au systeme :
 
 - `nixos-rebuild switch` applique a la fois la configuration systeme
-- et la partie la composition Home Manager active (`home/targets/<host>.nix` ou, en compatibilité, `home/users/default.nix`) pour l'utilisateur defini dans `vars.nix`
+- et la partie la composition Home Manager active (`home/targets/<host>.nix`) pour l'utilisateur defini dans `vars.nix`
 
 ## Prerequis
 
@@ -82,7 +82,7 @@ Exemples typiques :
 - ajouter/modifier un paquet dans `modules/apps/`
 - ajuster un module dans `modules/desktop/`
 - changer un profil dans `modules/profiles/`
-- ajouter un dotfile dans `dotfiles/` + la composition Home Manager active (`home/targets/<host>.nix` ou, en compatibilité, `home/users/default.nix`)
+- ajouter un dotfile dans `dotfiles/` + la composition Home Manager active (`home/targets/<host>.nix`)
 - mettre a jour la documentation dans `docs/`
 
 ### 5. Relire les changements Git
@@ -123,7 +123,7 @@ Utiliser la forme explicite si :
 - reconstruit la configuration NixOS du host
 - active la nouvelle generation systeme
 - applique Home Manager integre
-- met a jour les symlinks de la composition Home Manager active (`home/targets/<host>.nix` ou, en compatibilité, `home/users/default.nix`)
+- met a jour les symlinks de la composition Home Manager active (`home/targets/<host>.nix`)
 
 Il n'est pas necessaire de lancer un `home-manager switch` separe dans cette architecture.
 
@@ -192,7 +192,7 @@ git push
 Pour un changement de dotfile :
 
 1. modifier `dotfiles/<app>/...`
-2. verifier que la composition Home Manager active (`home/targets/<host>.nix` ou, en compatibilité, `home/users/default.nix`) reference bien ce fichier
+2. verifier que la composition Home Manager active (`home/targets/<host>.nix`) reference bien ce fichier
 3. appliquer :
 
 ```bash

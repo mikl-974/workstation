@@ -49,7 +49,7 @@ Le `flake.nix` expose maintenant :
 - `nixosConfigurations.*`
 - `darwinConfigurations.macmini`
 
-## Migration moderne de `main` et `laptop`
+## Migration moderne des targets NixOS
 
 `main` est maintenant branché explicitement sur le modèle moderne Home Manager :
 - `targets/hosts/main/default.nix`
@@ -78,7 +78,21 @@ Composition retenue pour cette passe :
 - rôle réutilisable : `home/roles/desktop-hyprland.nix`
 - dotfiles bruts actifs : Hyprland / foot / wofi / mako via `dotfiles/`
 
-Le fallback `home/users/default.nix` reste présent uniquement pour le host pas encore migré (`gaming`).
+`gaming` rejoint maintenant le même modèle :
+- `targets/hosts/gaming/default.nix`
+- `targets/hosts/gaming/config/default.nix`
+- `targets/hosts/gaming/config/user.nix`
+- `home/users/mikl.nix`
+- `home/targets/gaming.nix`
+
+Composition retenue pour cette passe :
+- target concret NixOS : `targets/hosts/gaming/`
+- identité user : `home/users/mikl.nix`
+- rôles réutilisables : `home/roles/desktop-hyprland.nix`, `home/roles/gaming-steam.nix`
+- dotfiles bruts actifs : Hyprland / foot / wofi / mako via `dotfiles/`
+
+Tous les targets NixOS du repo utilisent maintenant un `home/targets/<host>.nix` explicite.
+Le fallback `home/users/default.nix` a été retiré.
 
 ## Users normalisés disponibles
 

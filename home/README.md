@@ -49,6 +49,18 @@ L'affectation réelle se fait uniquement dans `home/targets/<host>.nix`.
   - `dotfiles/launchers/style.css`
   - `dotfiles/notifications/config`
 
+### `gaming`
+- identité : `home/users/mikl.nix`
+- rôles sur ce target : `desktop-hyprland`, `gaming-steam`
+- composition finale : `home/targets/gaming.nix`
+- dotfiles réellement actifs :
+  - `dotfiles/hyprland/hyprland.conf`
+  - `dotfiles/hyprland/profiles/default.conf`
+  - `dotfiles/terminal/foot.ini`
+  - `dotfiles/launchers/config`
+  - `dotfiles/launchers/style.css`
+  - `dotfiles/notifications/config`
+
 ### `mfo`
 - identité : `home/users/mfo.nix`
 - actuellement assigné via : `home/targets/ms-s1-max.nix`
@@ -71,10 +83,9 @@ L'affectation réelle se fait uniquement dans `home/targets/<host>.nix`.
 
 ## Legacy
 
-`home/users/default.nix` reste un fallback transitoire pour les anciens hosts.
-Ce n'est plus le chemin recommandé, `main`, `laptop` et `ms-s1-max` n'en dépendent plus, et il ne couvre plus que `gaming`.
+Il n'y a plus de fallback `home/users/default.nix`.
+Le chemin retenu est maintenant uniquement :
 
-Le chemin recommandé est :
 - `home/users/<user>.nix`
 - `home/roles/*.nix`
 - `home/targets/<host>.nix`

@@ -90,7 +90,7 @@ Vérifications effectuées :
 - Aucun placeholder `DEFINE_` dans les fichiers structurants
 - Fichiers critiques présents (`default.nix`, `disko.nix`)
 - `flake.nix` expose bien le host
-- la composition Home Manager active (`home/targets/<host>.nix` ou, en compatibilité, `home/users/default.nix`) présent
+- la composition Home Manager active (`home/targets/<host>.nix`) présent
 
 ### 3a. Installer via NixOS Anywhere
 

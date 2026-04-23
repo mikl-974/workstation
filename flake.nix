@@ -66,23 +66,16 @@
         nix-homebrew.darwinModules.nix-homebrew
       ];
 
-      # Prefer an explicit per-host Home Manager composition when it exists.
-      # Fall back to the legacy single-user file for older hosts not yet migrated.
+      # Each NixOS host must now expose its explicit Home Manager composition
+      # through home/targets/<hostname>.nix.
       mkHomeUsers = vars:
         let
           homeTargetPath = ./. + "/home/targets/${vars.hostname}.nix";
-          fallbackMessage =
-            if vars ? users && builtins.length vars.users > 1 then
-              "legacy home-manager fallback active for ${vars.hostname}: multi-user host still using single-user home/users/default.nix"
-            else
-              "legacy home-manager fallback active for ${vars.hostname}: using home/users/default.nix";
         in
         if builtins.pathExists homeTargetPath then
           import homeTargetPath
         else
-          builtins.trace fallbackMessage {
-            ${vars.username} = import ./home/users/default.nix;
-          };
+          throw "missing Home Manager composition for ${vars.hostname}: expected home/targets/${vars.hostname}.nix";
 
       # Build a NixOS host from its vars.nix and host-specific modules.
       mkHost = { vars, modules }:

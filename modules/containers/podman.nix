@@ -1,6 +1,7 @@
 { lib, config, hostVars, ... }:
 let
   cfg = config.workstation.containers.podman;
+  podmanUsers = hostVars.users or [ hostVars.username ];
 in
 {
   options.workstation.containers.podman.enable =
@@ -17,6 +18,8 @@ in
       defaultNetwork.settings.dns_enabled = true;
     };
 
-    users.users.${hostVars.username}.extraGroups = lib.mkAfter [ "podman" ];
+    users.users = lib.genAttrs podmanUsers (_: {
+      extraGroups = lib.mkAfter [ "podman" ];
+    });
   };
 }

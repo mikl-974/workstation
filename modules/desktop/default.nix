@@ -16,6 +16,7 @@
   services.greetd.settings.default_session = {
     # Generic greetd default for Hyprland-centric hosts; mixed-desktop hosts can
     # still override or disable greetd at the target level.
+    # No --remember here: keep the greeter stateless unless a target opts in.
     command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd Hyprland";
     user = "greeter";
   };

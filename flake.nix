@@ -48,11 +48,16 @@
       mkHomeUsers = vars:
         let
           homeTargetPath = ./. + "/home/targets/${vars.hostname}.nix";
+          fallbackMessage =
+            if vars ? users && builtins.length vars.users > 1 then
+              "legacy home-manager fallback active for ${vars.hostname}: multi-user host still using single-user home/users/default.nix"
+            else
+              "legacy home-manager fallback active for ${vars.hostname}: using home/users/default.nix";
         in
         if builtins.pathExists homeTargetPath then
           import homeTargetPath
         else
-          builtins.trace "legacy home-manager fallback active for ${vars.hostname}: using home/users/default.nix" {
+          builtins.trace fallbackMessage {
             ${vars.username} = import ./home/users/default.nix;
           };
 

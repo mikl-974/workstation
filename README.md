@@ -11,6 +11,8 @@ la composition utilisateur, les dotfiles, les services et les secrets.
 - `home/` : composition Home Manager (`users/`, `roles/`, `targets/`)
 - `dotfiles/` : bibliothèque de configs applicatives réutilisables
 - `stacks/` : services/applications portés par ce repo
+- `deployments/` : modèle de placement strict `target → stack instances` (`topology`, `inventory`, `validation`, hive Colmena)
+- `tofu/` : workspaces OpenTofu pour les targets cloud (`azure-ext`, `cloudflare-ext`, `gcp-ext`)
 - `secrets/` : secrets chiffrés avec `sops-nix`
 - `docs/` : documentation
 - `scripts/` : orchestration légère / validation
@@ -28,6 +30,7 @@ Le cas "machine virtuelle" est maintenant modélisé comme un profil réutilisab
 - `gaming`
 - `openclaw-vm`
 - `ms-s1-max`
+- `contabo` (server VPS, headless, déployé via Colmena — voir `docs/colmena.md`)
 
 ### Darwin
 - `macmini`
@@ -195,3 +198,41 @@ Premier flux réel branché :
   - `/run/secrets/ms-s1-max/bootstrap/dfo-password`
 
 Voir `docs/secrets.md`.
+
+## Apps opératoires
+
+Le point d'entrée quotidien est `nix run .#<app>`. Toutes les apps sont définies dans `flake.nix` et orchestrent — elles ne redéfinissent jamais la source de vérité (qui reste dans `targets/hosts/`, `home/`, `stacks/`, `deployments/`).
+
+### Pré-installation et inspection
+- `nix run .#init-host -- <host>` — génère `targets/hosts/<host>/vars.nix` interactivement
+- `nix run .#show-config -- <host>` — affiche la configuration effective d'un host
+- `nix run .#validate-install -- <host>` — vérifie qu'un host est prêt avant installation
+- `nix run .#doctor` — diagnostic général de l'environnement
+
+### Installation
+- `nix run .#install-anywhere -- <host>` — installation distante via NixOS Anywhere (`main`, `laptop`, `gaming`, `openclaw-vm`, `contabo`)
+- `nix run .#install-manual -- <host>` — guide d'installation manuelle (`ms-s1-max`)
+- `nix run .#post-install-check -- <host>` — vérifications post-installation
+
+### Déploiement (Colmena, hosts server-class)
+- `nix run .#deploy-contabo` — déploie `contabo` via Colmena
+- `nix run .#deploy-all-hosts` — déploie tous les hosts du hive
+
+Les workstations (`main`, `laptop`, `gaming`, `ms-s1-max`) sont mises à jour localement avec `nixos-rebuild switch --flake .#<host>`, pas via Colmena. Voir `docs/colmena.md`.
+
+### Cloud (OpenTofu)
+- `nix run .#plan-azure-ext` / `nix run .#deploy-azure-ext`
+- `nix run .#plan-cloudflare-ext` / `nix run .#deploy-cloudflare-ext`
+- `nix run .#plan-gcp-ext` / `nix run .#deploy-gcp-ext`
+
+Voir `docs/opentofu.md`.
+
+### Validation du modèle deployments
+- `nix run .#validate-inventory` — valide `topology.nix`, `inventory.nix` et tous les contrats `stacks/*/stack.nix` sous les règles strictes de `deployments/validation.nix`
+
+### Outputs flake additionnels
+- `nix eval .#inventory` — placement effectif (target → stack instances)
+- `nix eval .#topology` — topologie déclarée (kind, runtime, region par target)
+- `nix eval .#stacks` — contrats des stacks
+- `nix eval .#colmenaHive` — hive Colmena
+- `nix develop .#dotnet` — devShell .NET (voir `docs/dotnet-devshell.md`)

@@ -73,8 +73,8 @@ Pourquoi ce choix :
 
 Conclusion :
 
-- **Solaar reste dans `workstation`**
-- **il ne va pas dans `foundation`**
+- **Solaar reste dans `infra`**
+- **il n'est pas extrait vers un repo partage**
 - **il vit dans `modules/desktop/connectivity.nix` parce qu'il est couple au support systeme des peripheriques**
 
 ## Bluetooth
@@ -94,15 +94,15 @@ La couche Wi-Fi / connectivite locale est structuree ainsi :
 - applet desktop : `programs.nm-applet.enable`
 - outil d'edition avancee : `nm-connection-editor`
 
-Tailscale reste separe dans `profiles/networking.nix` via `foundation`.
+Tailscale reste separe dans `profiles/networking.nix` via le module local `modules/networking/tailscale.nix`.
 
-## Frontiere avec `foundation`
+## Frontiere desktop / reseau
 
-Ce qui reste dans `foundation` :
+Ce qui reste dans `modules/networking/` (briques reseau systeme reutilisables) :
 
 - les briques reseau generiques et partageables (ex. Tailscale)
 
-Ce qui reste dans `workstation` :
+Ce qui reste dans `modules/desktop/` et `modules/apps/` (couche desktop utilisateur) :
 
 - les daily apps desktop
 - les applets desktop
@@ -112,8 +112,8 @@ Ce qui reste dans `workstation` :
 
 Regle :
 
-- si c'est generique, multi-contexte et partageable → `foundation`
-- si c'est lie au bureau utilisateur et a la machine locale → `workstation`
+- si c'est une primitive reseau systeme reutilisable → `modules/networking/`
+- si c'est lie au bureau utilisateur et a la machine locale → `modules/desktop/` ou `modules/apps/`
 
 ## Extension propre
 

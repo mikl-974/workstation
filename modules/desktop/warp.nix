@@ -3,9 +3,10 @@ let
   cfg = config.workstation.desktop.warp;
 in
 {
-  # Cloudflare WARP is intentionally kept in workstation (not foundation).
+  # Cloudflare WARP is intentionally kept in the desktop layer of `infra`.
   # WARP is a desktop/user VPN client, not a generic server-side network
-  # primitive. It has no place in a shared infra foundation module.
+  # primitive. It belongs to `modules/desktop/`, not to the systemwide
+  # networking primitives in `modules/networking/`.
   options.workstation.desktop.warp.enable =
     lib.mkEnableOption "Cloudflare WARP desktop client";
 

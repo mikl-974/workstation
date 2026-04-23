@@ -68,3 +68,24 @@ sudo ls /run/secrets/ms-s1-max/bootstrap/
 sudo cat /run/secrets/ms-s1-max/bootstrap/mfo-password
 sudo cat /run/secrets/ms-s1-max/bootstrap/dfo-password
 ```
+
+## Structure complète de `secrets/`
+
+Au-delà du flux `ms-s1-max` réellement branché ci-dessus, le repo expose la structure suivante (cf. `secrets/README.md` pour le tableau de statut détaillé) :
+
+| Sous-chemin | Contenu | Statut actuel |
+|---|---|---|
+| `secrets/common.yaml` | secrets transverses (`infra.admin_email`, ...) | placeholder |
+| `secrets/hosts/<host>.yaml` | secrets spécifiques host (mots de passe utilisateurs, clé hôte SSH, auth key Tailscale) | `ms-s1-max.yaml` réel ; `contabo.yaml` placeholder ; autres à créer à la demande |
+| `secrets/stacks/<stack>.yaml` | secrets spécifiques stack (`token`, `*_password`, ...) | placeholders pour `immich`, `kopia`, `n8n`, `nextcloud`, `openwebui`, `pihole` |
+| `secrets/cloud/<provider>.yaml` | identifiants cloud logiques (`subscription_id`, `account_id`, `project_id`) | placeholders pour `azure`, `cloudflare`, `gcp` |
+
+Les clés YAML d'un fichier `secrets/stacks/<stack>.yaml` doivent correspondre **exactement** au champ `secrets` du contrat `stacks/<stack>/stack.nix` correspondant.
+
+## Règles de chiffrement (`.sops.yaml`)
+
+Les `creation_rules` sont déclarées **par chemin** (`secrets/common`, `secrets/hosts/.*`, `secrets/stacks/.*`, `secrets/cloud/.*`). Toutes les paths chiffrent vers la même Age recipient `admin_mfo` aujourd'hui ; la séparation par chemin permet une rotation per-stack ou per-provider plus tard sans réécrire les autres fichiers.
+
+## Placeholders vs vrais secrets
+
+Un fichier placeholder contient une chaîne `ENC[AES256_GCM,data:REPLACE_ME,...]` reconnaissable. Il n'est **pas** déchiffrable par SOPS : il existe uniquement pour figer la structure et la convention de nommage. Tout placeholder doit être matérialisé avec `sops` avant qu'un host ou une stack n'en consomme la valeur.

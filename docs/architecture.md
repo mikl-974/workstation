@@ -133,6 +133,43 @@ Le fallback `home/users/default.nix` a été retiré.
 Les hosts NixOS utilisent maintenant tous un binding explicite dans `home/targets/`.
 Le target Darwin `macmini` reste séparé de cette logique Home Manager NixOS.
 
+## Modèle target → stack instances
+
+Le repo distingue trois objets :
+
+- un **target** est un endroit où l'on exécute quelque chose. Un host NixOS est un target particulier (`kind = "nixosHost"`) ; un workspace cloud OpenTofu en est un autre (`kind = "azureContainerApps"`, `gcpCloudRun`, `cloudflareContainers`).
+- une **stack** décrit son contrat portable dans `stacks/<stack>/stack.nix` (mode de déploiement, rôles, targets supportés, secrets, besoins, volumes).
+- un **assignment** dit qu'une instance d'une stack est placée sur un target.
+
+Les trois sources de vérité associées :
+
+| Couche | Fichier |
+|---|---|
+| topologie déclarée | `deployments/topology.nix` |
+| placement effectif | `deployments/inventory.nix` |
+| contrats des stacks | `stacks/<stack>/stack.nix` |
+| validation stricte | `deployments/validation.nix` (app `nix run .#validate-inventory`) |
+
+Le `runtime` d'un target précise **comment** il est opéré (`nixos-systemd`, `dokploy`, `compose`, `tofu`). Il reste subordonné au repo : les contrats, les affectations et les secrets restent ici, jamais dans le control plane runtime.
+
+Voir aussi `deployments/README.md`, `docs/stack-classification.md`, `docs/colmena.md`, `docs/opentofu.md`.
+
+## Conflit de nom `macmini`
+
+Le repo `infra` contient un target `macmini` qui est un **Darwin** (`darwinConfigurations.macmini`, cf. `targets/hosts/macmini/`). Le repo historique `homelab` contenait un target `macmini` qui était un **NixOS** server-class portant une partie des stacks LAN (`immich`, `n8n`, `pihole`, `openwebui`, `opencode`, `tsdproxy`, `kopia`, agent `beszel`).
+
+Tant que ce conflit de nom n'est pas tranché :
+
+- `topology.nix` ne déclare **pas** de target `macmini` côté `nixosHost` — le seul `macmini` du repo reste le Darwin, et il n'est volontairement pas dans le modèle de stacks ;
+- les stacks à vocation LAN qui n'ont pas d'autre host candidat aujourd'hui (`immich`, `n8n`, `pihole`, `openwebui`, `opencode`, `rustdesk`) ont un contrat valide mais aucune affectation (cf. `docs/stack-classification.md`) ;
+- `ai-server` fait exception : il est consommé directement par `ms-s1-max` via `modules/profiles/ai-server.nix` et l'inventory l'assigne en conséquence (`ai-server-ms-s1-max`) ;
+- ces stacks sont prêtes à être assignées dès qu'un host NixOS LAN compatible existera dans `topology.nix` (par exemple un futur `macmini-nixos` ou un autre nom non ambigu).
+
+Cette séparation évite deux erreurs :
+
+1. instancier des stacks sur un host qui n'existe pas (cassait `validate-inventory`) ;
+2. inventer un host NixOS fictif pour faire passer la validation.
+
 ## Parcours d'installation NixOS
 
 - `main`, `laptop`, `gaming` et `openclaw-vm` ont maintenant un `disko.nix` branché

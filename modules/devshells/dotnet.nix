@@ -7,8 +7,9 @@
 # IDEs (VS Code, Rider, WebStorm) are desktop applications — they live in
 # modules/apps/editors.nix and are installed via profiles/dev.nix.
 #
-# Do not move this to foundation. foundation hosts generic, server-side
-# reusable modules. A personal dev workstation shell belongs here.
+# Personal dev workstation tooling belongs in this repo. It is intentionally
+# kept inside `infra/modules/devshells/` rather than abstracted out: there is
+# no second consumer that would justify a shared layer.
 { pkgs }:
 pkgs.mkShell {
   packages = with pkgs; [

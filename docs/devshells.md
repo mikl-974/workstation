@@ -2,11 +2,11 @@
 
 ## Philosophie
 
-Les devShells de `workstation` sont locaux et orientes poste de travail personnel.
+Les devShells de `infra` sont locaux et orientes poste de travail personnel.
 
-Regle de separation :
-- `foundation` — shells generiques et partages (outillage serveur, CI, scripts infra)
-- `workstation` — shells de productivite developpeur, specifiques au poste utilisateur
+Regle de placement :
+- `infra/modules/devshells/` — shells de productivite developpeur, specifiques au poste utilisateur
+- les shells generiques de tooling serveur ou CI ne sont pas portes par ce repo aujourd'hui ; les ajouter ici uniquement quand un besoin reel emerge
 
 Un shell doit contenir des outils CLI et des runtimes.
 Les editeurs et IDE sont des applications desktop — ils ne vivent pas dans un shell.
@@ -33,7 +33,7 @@ nix develop .#dotnet
 
 Definition : `modules/devshells/dotnet.nix`.
 
-Ce shell est **local a `workstation`**. Il n'est pas consomme depuis `foundation` et ne doit pas y migrer.
+Ce shell est **local au monorepo `infra`**, dans `infra/modules/devshells/dotnet.nix`. Il sert le poste de travail personnel et n'est pas exporte vers un autre repo.
 
 ### Contenu
 
@@ -58,13 +58,12 @@ Ils vivent desormais dans `modules/apps/editors.nix` et `modules/apps/dev.nix`
 et sont installes en tant que paquets systeme via `modules/profiles/dev.nix`.
 Ils sont toujours disponibles, independamment de l'entree dans un shell de dev.
 
-## Pourquoi ce shell est local a `workstation`
+## Pourquoi ce shell est local au repo
 
 Ce shell contient des outils de productivite personnelle (Docker, browser testing)
 qui n'ont aucune valeur dans un contexte serveur ou CI generique.
-Ils appartiennent au poste de travail, pas au socle partage.
-
-`foundation` ne doit pas connaitre les besoins d'un poste de dev personnel.
+Ils appartiennent au poste de travail, et restent versionnes ici tant qu'aucun
+autre repo n'a besoin de les consommer.
 
 ## Relation shell `.NET` / Podman
 
@@ -109,11 +108,14 @@ jetbrains.goland
 2. L'exposer dans `flake.nix` via `devShells.<system>.<nom>`
 3. Documenter son usage dans ce fichier
 
-## Quand passer un shell dans `foundation`
+## Quand extraire un shell hors de ce repo
 
-Uniquement si le shell est :
+Aujourd'hui, aucun shell n'est extrait : le repo ne consomme plus d'input externe pour ses devShells.
+
+Un shell pourrait justifier d'etre extrait vers un autre repo seulement s'il est :
 - generique (pas de tooling utilisateur ou IDE)
 - utile sur des machines serveur ou CI
 - stable et clairement delimite
+- reellement consomme par au moins un second repo
 
-Un shell de productivite personnelle reste dans `workstation`.
+Un shell de productivite personnelle reste dans `infra/modules/devshells/`.

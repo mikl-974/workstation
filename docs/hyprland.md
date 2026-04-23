@@ -47,12 +47,12 @@ La base inclut :
 - historique clipboard actif via `cliphist` + `wl-paste --watch`
 - bindings de base pour terminal, launcher, navigateur, fichiers et clipboard history
 
-Tailscale est active via `modules/profiles/networking.nix` (module `foundation`), pas depuis le profil desktop.
+Tailscale est active via `modules/profiles/networking.nix` (module local `infra/modules/networking/tailscale.nix`), pas depuis le profil desktop.
 
 ## Ce qui n'est volontairement pas inclus
 
 - logique utilisateur cachee
-- Tailscale (il vient de `foundation` via `modules/profiles/networking.nix`)
+- Tailscale (il vient de `modules/networking/tailscale.nix` via `modules/profiles/networking.nix`)
 
 ## Noctalia
 
@@ -71,7 +71,7 @@ Voir `docs/theming.md` pour les details.
 
 WARP est gere dans `modules/desktop/warp.nix` et active via `modules/profiles/desktop-hyprland.nix`.
 
-Il reste dans `workstation` parce que c'est un client VPN desktop (interface utilisateur), pas une primitive reseau serveur. Le module `foundation.networking.cloudflared` (tunnel daemon) est une brique differente et distincte.
+Il reste dans `workstation` parce que c'est un client VPN desktop (interface utilisateur), pas une primitive reseau serveur. Un eventuel module `cloudflared` (tunnel daemon) serait une brique differente et distincte, a placer dans `modules/networking/` cote serveur.
 
 ## Connectivite locale et utilitaires
 

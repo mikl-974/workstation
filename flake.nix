@@ -17,11 +17,6 @@
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
 
-    foundation = {
-      url = "github:mikl-974/foundation";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     # Declarative disk partitioning — required for NixOS Anywhere installations.
     # See docs/nixos-anywhere.md and targets/hosts/main/disko.nix.
     disko = {
@@ -39,6 +34,15 @@
 
     sops-nix = {
       url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # Colmena — push-based NixOS deployment for server-class hosts.
+    # Used by `deployments/colmena.nix` and the `deploy-*` apps.
+    # Workstations are still installed/updated locally; Colmena is opt-in for
+    # the hosts listed in the hive (currently only `contabo`).
+    colmena = {
+      url = "github:zhaofengli/colmena";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -67,14 +71,14 @@
     };
   };
 
-  outputs = inputs@{ self, nixpkgs, foundation, disko, home-manager, sops-nix, nix-openclaw, nix-darwin, nix-homebrew, noctalia, ... }:
+  outputs = inputs@{ self, nixpkgs, disko, home-manager, sops-nix, nix-openclaw, nix-darwin, nix-homebrew, noctalia, colmena, ... }:
     let
       lib = nixpkgs.lib;
       systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
 
       # Shared building blocks used by all infra NixOS targets.
       sharedModules = [
-        foundation.nixosModules.networkingTailscale
+        ./modules/networking/tailscale.nix
         home-manager.nixosModules.home-manager
         sops-nix.nixosModules.sops
         ./modules/security/sops.nix
@@ -161,6 +165,11 @@
           vars   = import ./targets/hosts/ms-s1-max/vars.nix;
           modules = [ ./targets/hosts/ms-s1-max/default.nix ];
         };
+
+        contabo = mkHost {
+          vars   = import ./targets/hosts/contabo/vars.nix;
+          modules = [ disko.nixosModules.disko ./targets/hosts/contabo/default.nix ./targets/hosts/contabo/disko.nix ];
+        };
       };
 
       darwinConfigurations = {
@@ -206,7 +215,33 @@
           install-anywhere   = mkApp ./scripts/install-anywhere.sh;
           install-manual     = mkApp ./scripts/install-manual.sh;
           post-install-check = mkApp ./scripts/post-install-check.sh;
+          validate-inventory = mkApp ./scripts/validate-inventory.sh;
+          deploy-contabo     = mkApp ./scripts/deploy-contabo.sh;
+          deploy-all-hosts   = mkApp ./scripts/deploy-all-hosts.sh;
+          plan-azure-ext         = mkApp ./scripts/plan-azure-ext.sh;
+          deploy-azure-ext       = mkApp ./scripts/deploy-azure-ext.sh;
+          plan-cloudflare-ext    = mkApp ./scripts/plan-cloudflare-ext.sh;
+          deploy-cloudflare-ext  = mkApp ./scripts/deploy-cloudflare-ext.sh;
+          plan-gcp-ext           = mkApp ./scripts/plan-gcp-ext.sh;
+          deploy-gcp-ext         = mkApp ./scripts/deploy-gcp-ext.sh;
         }
       );
+
+      # Deployment model — strict, machine-readable target → stack assignments.
+      # `inventoryValidation` throws when the inventory violates any contract;
+      # downstream consumers (CI, scripts, agents) can rely on `inventory`,
+      # `topology`, and `stacks` only after this evaluation has succeeded.
+      inventoryValidation = import ./deployments/validation.nix;
+      inventory = (import ./deployments/validation.nix).inventory;
+      topology = (import ./deployments/validation.nix).topology;
+      stacks = (import ./deployments/validation.nix).stacks;
+
+      # Colmena hive — server-class NixOS hosts pushed via `colmena apply`.
+      # Workstations are NOT in the hive: they are installed via NixOS Anywhere
+      # and reconfigured locally with `nixos-rebuild`.
+      colmenaHive = import ./deployments/colmena.nix {
+        inherit nixpkgs colmena;
+        flakeSelf = self;
+      };
     };
 }

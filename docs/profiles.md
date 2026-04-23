@@ -29,7 +29,7 @@ Ordre logique :
 | `modules/profiles/dev.nix` | environnement dev utilisateur + containers locaux |
 | `modules/profiles/gaming.nix` | role gaming |
 | `modules/profiles/ai.nix` | role AI local |
-| `modules/profiles/networking.nix` | briques reseau partagees via `foundation` |
+| `modules/profiles/networking.nix` | briques reseau partagees via `modules/networking/` (Tailscale local) |
 
 ## Profil `desktop-hyprland`
 

@@ -1,0 +1,6 @@
+services:
+  pihole:
+    image: pihole/pihole:latest
+    restart: unless-stopped
+    env_file:
+      - env/public.env

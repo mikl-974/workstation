@@ -1,0 +1,6 @@
+services:
+  rustdesk:
+    image: rustdesk/rustdesk-server:latest
+    restart: unless-stopped
+    env_file:
+      - env/public.env

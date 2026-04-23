@@ -1,0 +1,6 @@
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    restart: unless-stopped
+    env_file:
+      - env/public.env

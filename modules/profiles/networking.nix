@@ -1,9 +1,9 @@
 { ... }:
 {
-  # Tailscale is consumed from the foundation shared module.
-  # The NixOS module (foundation.nixosModules.networkingTailscale) is
-  # registered at the flake level so the option namespace is always available.
-  foundation.networking.tailscale = {
+  # Tailscale is consumed from the local infra module.
+  # The NixOS module (./modules/networking/tailscale.nix) is registered at the
+  # flake level via sharedModules so the option namespace is always available.
+  infra.networking.tailscale = {
     enable = true;
     useRoutingFeatures = "client";
   };

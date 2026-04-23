@@ -2,8 +2,36 @@ keys:
   # Public Age recipient derived from the `mikl-974` SSH public key.
   # The matching private key / derived Age identity must never be committed.
   - &admin_mfo age1j9nearzgw8k859r0re0r4uzejxr67sg5glfhnhrzuu5e5f63pyesyvdche
+
+# Per-path creation rules.
+#
+# All paths currently encrypt to the same recipient (`admin_mfo`); declaring
+# them separately makes it explicit which path owns which key group, and lets
+# us split per-stack or per-provider keys later without rewriting every file.
 creation_rules:
-  - path_regex: secrets/.*\.(yaml|yml|json|env|ini)$
+  # Cross-cutting secrets (admin email, ...).
+  - path_regex: ^secrets/common\.(yaml|yml|json|env|ini)$
+    key_groups:
+      - age:
+          - *admin_mfo
+
+  # Per-host secrets (passwords, ssh host keys, tailscale auth keys).
+  - path_regex: ^secrets/hosts/.*\.(yaml|yml|json|env|ini)$
+    key_groups:
+      - age:
+          - *admin_mfo
+
+  # Per-stack secrets (tokens, db passwords, ...).
+  # Keys here MUST match the `secrets` field of the corresponding
+  # `stacks/<stack>/stack.nix` contract.
+  - path_regex: ^secrets/stacks/.*\.(yaml|yml|json|env|ini)$
+    key_groups:
+      - age:
+          - *admin_mfo
+
+  # Per-cloud-provider secrets (subscription / account / project ids,
+  # operator credentials when not provided via environment variables).
+  - path_regex: ^secrets/cloud/.*\.(yaml|yml|json|env|ini)$
     key_groups:
       - age:
           - *admin_mfo

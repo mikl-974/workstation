@@ -1,0 +1,6 @@
+services:
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    restart: unless-stopped
+    env_file:
+      - env/public.env

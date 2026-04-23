@@ -26,7 +26,6 @@
 
   # Hostname de la machine.
   # Doit correspondre à la clé nixosConfigurations dans flake.nix.
-  # Valeurs disponibles : "main", "laptop", "gaming"
   hostname = "DEFINE_HOSTNAME";
 
   # Disque cible pour l'installation (requis si le host utilise disko).

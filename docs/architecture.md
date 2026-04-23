@@ -158,5 +158,7 @@ La stack ne devient pas un host.
 Le rôle de `stacks/openclaw/default.nix` est volontairement mince :
 - importer le bon module upstream
 - mapper l’interface locale `infra.stacks.openclaw.*`
-- préparer port, config, données, logs, `public.env` et point d’entrée secrets
+- préparer port, config, données, logs, `public.env`
+- générer le secret minimal de bootstrap nécessaire au gateway auth
+- garder un point d’entrée `sops-nix` pour des secrets externes réels quand ils existent
 - éviter toute réimplémentation maison d’OpenClaw

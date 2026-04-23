@@ -161,6 +161,23 @@ if [[ -n "$HOST" ]]; then
   else
     ok "Aucune stack locale importée explicitement par ce host"
   fi
+
+  if grep -Rhoq 'stacks/openclaw/default\.nix' "$REPO_ROOT/targets/hosts/$HOST"; then
+    if [[ -f "$REPO_ROOT/stacks/openclaw/env/public.env" ]]; then
+      ok "OpenClaw : public env versionné"
+    else
+      fail "OpenClaw : stacks/openclaw/env/public.env manquant"
+    fi
+
+    ok "OpenClaw : posture réseau minimale retenue = tailnet-only"
+    ok "OpenClaw : token d'auth gateway généré localement au premier start"
+
+    if [[ -f "$REPO_ROOT/secrets/stacks/openclaw.yaml" ]]; then
+      ok "OpenClaw : secret env sops présent (secrets/stacks/openclaw.yaml)"
+    else
+      warn "OpenClaw : aucun secret env externe versionné — le premier boot minimal reste possible, mais Telegram/providers restent volontairement hors scope"
+    fi
+  fi
 fi
 
 echo ""

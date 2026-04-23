@@ -23,13 +23,21 @@ Dans `targets/hosts/ms-s1-max/default.nix` :
 
 ## OpenClaw
 
-La stack `stacks/openclaw/` prépare un point d’intégration `sops-nix` pour un
-dotenv chiffré OpenClaw, mais aucun secret OpenClaw réel n’est encore commité.
+La stack `stacks/openclaw/` consomme maintenant un premier secret réel :
+- le token d’auth gateway, généré localement au premier start dans `/var/lib/openclaw/secrets/gateway-token.env`
 
 Principe retenu :
-- la stack locale peut déclarer un fichier secret via `infra.stacks.openclaw.secrets.sopsFile`
-- ce secret alimente le service upstream `openclaw-gateway` comme `EnvironmentFile`
-- tant que les besoins secrets exacts ne sont pas stabilisés, aucun faux secret n’est versionné
+- le repo ne commit aucun secret OpenClaw fictif
+- le token d’auth nécessaire au gateway est créé sur la VM dédiée au premier start
+- la stack locale peut toujours raccorder un fichier secret via `infra.stacks.openclaw.secrets.sopsFile`
+- ce fichier alimente alors le service upstream `openclaw-gateway` comme `EnvironmentFile`
+
+Secrets externes encore hors scope pour cette passe :
+- token Telegram
+- clés provider (`ANTHROPIC_API_KEY`, etc.)
+
+Le bon emplacement retenu pour ces secrets externes, quand ils existeront, reste :
+- `secrets/stacks/openclaw.yaml`
 
 ## Comment reproduire
 

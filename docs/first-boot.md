@@ -9,14 +9,10 @@ Cette doc couvre le passage critique entre :
 - premier login
 - machine réellement prête
 
-Le but n'est pas de ricer le desktop, mais de confirmer que la workstation est exploitable :
+Le but n'est pas de ricer le desktop, mais de confirmer que la machine est exploitable :
 
-- notifications actives
-- historique clipboard actif
-- launcher branche
-- terminal branche
-- dotfiles reellement utilises
-- install / rebuild / Home Manager cohérents
+- pour un desktop : session et dotfiles cohérents
+- pour un host de service : runtime et services critiques cohérents
 
 ## Workflow recommandé après installation
 
@@ -26,7 +22,7 @@ Ordre officiel :
 2. si nécessaire : `sudo nixos-rebuild switch --flake .#<host>`
 3. lancer : `nix run .#post-install-check -- --host <host>`
 4. relire les warnings éventuels
-5. vérifier la session Hyprland au premier login
+5. vérifier la session ou le runtime réellement utile au host
 
 ## Ce qu'il faut vérifier au premier boot
 
@@ -35,6 +31,7 @@ Ordre officiel :
 - `nixos-rebuild` fonctionne
 - le repo est bien présent localement si tu comptes rebuilder depuis la machine
 - Home Manager a bien posé les dotfiles actifs
+- les services réellement portés par le host démarrent
 
 Commande de base :
 
@@ -42,7 +39,37 @@ Commande de base :
 nix run .#post-install-check -- --host <host>
 ```
 
-## Ce qui est integre
+## Cas service : `openclaw-vm`
+
+Pour `openclaw-vm`, le premier boot crédible ne passe pas par un desktop.
+Il faut vérifier :
+
+- `openclaw-gateway.service` actif
+- `/etc/openclaw/openclaw.json` présent
+- `/etc/openclaw/public.env` présent
+- `/var/lib/openclaw/secrets/gateway-token.env` présent
+- `/var/log/openclaw/gateway.log` présent ou en cours de création
+- le bind reste `tailnet`
+
+Commandes utiles :
+
+```bash
+sudo systemctl status openclaw-gateway
+sudo journalctl -u openclaw-gateway -n 50 --no-pager
+sudo ls -la /etc/openclaw
+sudo ls -la /var/lib/openclaw
+sudo ls -la /var/lib/openclaw/secrets
+sudo ls -la /var/log/openclaw
+sudo grep '"bind"' /etc/openclaw/openclaw.json
+```
+
+Signal attendu pour cette première passe :
+- le gateway démarre
+- il n’est pas exposé publiquement par défaut
+- l’auth gateway existe réellement
+- les intégrations Telegram/provider restent absentes tant que leurs secrets ne sont pas fournis
+
+## Cas desktop
 
 ### `mako`
 

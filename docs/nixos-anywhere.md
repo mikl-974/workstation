@@ -164,6 +164,8 @@ Pour OpenClaw :
 - le host reste responsable du fait "je porte OpenClaw"
 - la stack locale reste responsable du câblage repo-local
 - le runtime OpenClaw lui-même vient de `nix-openclaw`
+- la première exposition retenue est `tailnet-only`
+- le premier secret réellement consommé est le token d’auth gateway généré au premier start
 
 Voir `docs/bootstrap.md` pour le workflow complet post-installation.
 

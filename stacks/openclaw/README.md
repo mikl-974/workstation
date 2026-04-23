@@ -19,7 +19,9 @@ Ce que la couche locale prépare :
 - `/var/lib/openclaw`
 - `/var/log/openclaw`
 - port du gateway
-- point d’entrée optionnel pour secrets via `sops-nix`
+- bind réseau prudent (`tailnet`)
+- génération locale du token d’auth gateway au premier start
+- point d’entrée optionnel pour secrets externes via `sops-nix`
 
 ## Frontière
 
@@ -39,11 +41,13 @@ La stack ne décide jamais :
 - activation du service systemd NixOS via la stack locale
 - fichier checked-in `env/public.env` pour les variables publiques
 - interface locale `infra.stacks.openclaw.*`
-- option `infra.stacks.openclaw.secrets.sopsFile` pour raccorder un dotenv chiffré plus tard
+- bind minimal `tailnet-only`
+- génération du secret runtime `OPENCLAW_GATEWAY_TOKEN`
+- option `infra.stacks.openclaw.secrets.sopsFile` pour raccorder un dotenv chiffré quand des secrets externes existent
 
 ## Ce qui reste volontairement pour la suite
 
-- secrets réels OpenClaw versionnés
 - configuration bot/provider complète
 - choix précis des plugins/outils OpenClaw
-- exposition réseau au-delà du port minimal déclaré
+- secrets externes OpenClaw versionnés dans `secrets/stacks/openclaw.yaml`
+- exposition réseau au-delà du bind `tailnet`

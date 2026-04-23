@@ -3,6 +3,8 @@ let
   cfg = config.infra.stacks.openclaw;
   upstreamPackages = flakeInputs.nix-openclaw.packages.${pkgs.system};
   secretEnvironmentSecretName = "openclaw/env";
+  generatedSecretsDir = "${cfg.dataDir}/secrets";
+  generatedGatewayTokenEnvFile = "${generatedSecretsDir}/gateway-token.env";
   secretEnvironmentFile =
     if cfg.secrets.sopsFile != null
     then config.sops.secrets.${secretEnvironmentSecretName}.path
@@ -44,6 +46,12 @@ in
       type = lib.types.port;
       default = 18789;
       description = "OpenClaw gateway listen port.";
+    };
+
+    bind = lib.mkOption {
+      type = lib.types.str;
+      default = "tailnet";
+      description = "Gateway bind target passed to the upstream OpenClaw config. `tailnet` keeps the first deployment off the public Internet.";
     };
 
     openFirewall = lib.mkOption {
@@ -103,11 +111,17 @@ in
       mode = "0400";
     };
 
+    systemd.tmpfiles.rules = [
+      "d ${generatedSecretsDir} 0750 openclaw openclaw - -"
+    ];
+
     environment.etc."openclaw/public.env".source = cfg.publicEnvFile;
     environment.etc."openclaw/stack-context".text = ''
       openclaw
       upstream=nix-openclaw
       upstreamModule=nixosModules.openclaw-gateway
+      exposure=${cfg.bind}
+      bootstrapSecret=${generatedGatewayTokenEnvFile}
     '';
 
     services.openclaw-gateway = {
@@ -120,10 +134,29 @@ in
       environment = cfg.publicEnvironment;
       environmentFiles =
         [ "/etc/openclaw/public.env" ]
+        ++ [ generatedGatewayTokenEnvFile ]
         ++ lib.optionals (secretEnvironmentFile != null) [ secretEnvironmentFile ]
         ++ cfg.extraEnvironmentFiles;
+      execStartPre = [
+        ''
+          ${pkgs.bash}/bin/bash -euo pipefail -c '
+            install -d -m 0750 "${generatedSecretsDir}"
+            if [[ ! -s "${generatedGatewayTokenEnvFile}" ]] || ! grep -q "^OPENCLAW_GATEWAY_TOKEN=" "${generatedGatewayTokenEnvFile}"; then
+              token="$(head -c 32 /dev/urandom | base64 | tr -d "\n" | tr "/+" "_-")"
+              printf "OPENCLAW_GATEWAY_TOKEN=%s\n" "$token" > "${generatedGatewayTokenEnvFile}"
+              chmod 0400 "${generatedGatewayTokenEnvFile}"
+            fi
+          '
+        ''
+      ];
+      servicePath = [ pkgs.gnugrep ];
       config = lib.recursiveUpdate {
-        gateway.mode = "local";
+        gateway = {
+          mode = "local";
+          bind = cfg.bind;
+          auth.mode = "token";
+        };
+        discovery.mdns.mode = "minimal";
       } cfg.config;
     };
 

@@ -36,9 +36,15 @@ Voir `docs/secrets.md`.
 
 ## OpenClaw
 
-Le repo prépare aussi un point d’entrée secrets pour `stacks/openclaw/`, mais
-aucun secret OpenClaw réel n’est versionné à ce stade.
+Le repo branche maintenant un premier secret réel pour `stacks/openclaw/` :
+- token d’auth gateway généré au premier start sur la VM sous
+  `/var/lib/openclaw/secrets/gateway-token.env`
 
-Quand le contrat runtime OpenClaw sera figé, la stack pourra consommer un
-dotenv chiffré via `infra.stacks.openclaw.secrets.sopsFile`, sans réimplémenter
-le packaging upstream.
+Le repo ne commit toujours pas de faux secret OpenClaw.
+
+Quand des secrets externes réels existeront (Telegram, provider, etc.), la
+stack pourra consommer un dotenv chiffré via
+`infra.stacks.openclaw.secrets.sopsFile`.
+
+Le chemin retenu pour cela reste :
+- `secrets/stacks/openclaw.yaml`

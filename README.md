@@ -147,10 +147,13 @@ Ce qui est réellement branché :
 - module upstream `nixosModules.openclaw-gateway`
 - package upstream `packages.<system>.openclaw-gateway`
 - interface locale `infra.stacks.openclaw.*`
-- répertoires hôte, port, fichier `public.env`, point d’entrée secrets `sops`
+- config minimale `gateway.mode = "local"` + `gateway.bind = "tailnet"`
+- répertoires hôte, port, fichier `public.env`
+- token d’auth gateway généré localement au premier start
+- point d’entrée `sops-nix` conservé pour des secrets externes futurs
 
 Ce qui reste volontairement hors scope :
-- secrets réels versionnés pour OpenClaw
+- secrets externes Telegram/provider versionnés
 - config Telegram/providers complète
 - choix runtime/plugins enrichis au-delà du minimum d’intégration
 

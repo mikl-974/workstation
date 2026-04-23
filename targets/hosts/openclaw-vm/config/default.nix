@@ -26,10 +26,13 @@
 
   infra.stacks.openclaw = {
     enable = true;
+    bind = "tailnet";
     config = {
       gateway = {
         mode = "local";
+        auth.mode = "token";
       };
+      discovery.mdns.mode = "minimal";
     };
   };
 }

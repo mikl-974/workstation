@@ -14,7 +14,8 @@
   services.dbus.enable = true;
   services.greetd.enable = true;
   services.greetd.settings.default_session = {
-    # Keep session choice explicit on mixed-desktop targets such as ms-s1-max.
+    # Generic greetd default for Hyprland-centric hosts; mixed-desktop hosts can
+    # still override or disable greetd at the target level.
     command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd Hyprland";
     user = "greeter";
   };

@@ -52,7 +52,9 @@
         if builtins.pathExists homeTargetPath then
           import homeTargetPath
         else
-          { ${vars.username} = import ./home/users/default.nix; };
+          builtins.trace "legacy home-manager fallback active for ${vars.hostname}: using home/users/default.nix" {
+            ${vars.username} = import ./home/users/default.nix;
+          };
 
       # Build a NixOS host from its vars.nix and host-specific modules.
       # vars   — attrset imported from targets/hosts/<name>/vars.nix
@@ -113,10 +115,13 @@
         let pkgs = import nixpkgs { inherit system; };
             mkApp = script: {
               type = "app";
-              # writeShellScript rewrites the shebang into the Nix store path.
-              # Our shell scripts resolve the repo root accordingly when run from
-              # the store, so BASH_SOURCE-based sourcing remains functional.
-              program = "${pkgs.writeShellScript (builtins.baseNameOf script) (builtins.readFile script)}";
+              # Preserve the original shebang so BASH_SOURCE/path resolution
+              # inside the script body keeps behaving like the checked-in file.
+              program = "${pkgs.writeTextFile {
+                name = builtins.baseNameOf script;
+                text = builtins.readFile script;
+                executable = true;
+              }}";
             };
         in {
           init-host          = mkApp ./scripts/init-host.sh;

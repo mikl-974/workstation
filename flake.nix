@@ -37,6 +37,15 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Colmena — push-based NixOS deployment for server-class hosts.
+    # Used by `deployments/colmena.nix` and the `deploy-*` apps.
+    # Workstations are still installed/updated locally; Colmena is opt-in for
+    # the hosts listed in the hive (currently only `contabo`).
+    colmena = {
+      url = "github:zhaofengli/colmena";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     nix-openclaw = {
       url = "github:openclaw/nix-openclaw";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -62,7 +71,7 @@
     };
   };
 
-  outputs = inputs@{ self, nixpkgs, disko, home-manager, sops-nix, nix-openclaw, nix-darwin, nix-homebrew, noctalia, ... }:
+  outputs = inputs@{ self, nixpkgs, disko, home-manager, sops-nix, nix-openclaw, nix-darwin, nix-homebrew, noctalia, colmena, ... }:
     let
       lib = nixpkgs.lib;
       systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
@@ -156,6 +165,11 @@
           vars   = import ./targets/hosts/ms-s1-max/vars.nix;
           modules = [ ./targets/hosts/ms-s1-max/default.nix ];
         };
+
+        contabo = mkHost {
+          vars   = import ./targets/hosts/contabo/vars.nix;
+          modules = [ disko.nixosModules.disko ./targets/hosts/contabo/default.nix ./targets/hosts/contabo/disko.nix ];
+        };
       };
 
       darwinConfigurations = {
@@ -202,6 +216,8 @@
           install-manual     = mkApp ./scripts/install-manual.sh;
           post-install-check = mkApp ./scripts/post-install-check.sh;
           validate-inventory = mkApp ./scripts/validate-inventory.sh;
+          deploy-contabo     = mkApp ./scripts/deploy-contabo.sh;
+          deploy-all-hosts   = mkApp ./scripts/deploy-all-hosts.sh;
         }
       );
 
@@ -213,5 +229,13 @@
       inventory = (import ./deployments/validation.nix).inventory;
       topology = (import ./deployments/validation.nix).topology;
       stacks = (import ./deployments/validation.nix).stacks;
+
+      # Colmena hive — server-class NixOS hosts pushed via `colmena apply`.
+      # Workstations are NOT in the hive: they are installed via NixOS Anywhere
+      # and reconfigured locally with `nixos-rebuild`.
+      colmenaHive = import ./deployments/colmena.nix {
+        inherit nixpkgs colmena;
+        flakeSelf = self;
+      };
     };
 }

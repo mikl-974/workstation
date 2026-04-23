@@ -49,5 +49,12 @@
       address = "openclaw-vm";
       region = "home-lan";
     };
+
+    contabo = {
+      kind = "nixosHost";
+      runtime = "dokploy";
+      address = "contabo";
+      region = "eu-central";
+    };
   };
 }

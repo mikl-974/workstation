@@ -26,5 +26,13 @@ in
     openclaw-vm = [
       { stack = "openclaw"; instance = "openclaw-main"; role = "gateway"; }
     ];
+
+    contabo = [
+      { stack = "homepage"; instance = "homepage-main"; role = "portal"; }
+      { stack = "beszel"; instance = "beszel-hub"; role = "hub"; }
+      { stack = "tsdproxy"; instance = "tsdproxy-contabo"; role = "edge-proxy"; }
+      { stack = "kopia"; instance = "kopia-contabo"; role = "backup-client"; }
+      { stack = "nextcloud"; instance = "nextcloud-qtalk"; role = "main"; }
+    ];
   };
 }

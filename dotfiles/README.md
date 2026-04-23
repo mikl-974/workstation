@@ -29,4 +29,4 @@ Le binding se fait dans `home/`.
 
 1. créer le contenu brut dans `dotfiles/`
 2. le lier depuis un rôle si c'est commun
-3. le surcharger depuis `home/users/<user>.nix` seulement si la différence est réellement utilisateur-spécifique
+3. le surcharger depuis `home/users/<user>.nix` seulement si la différence est réellement spécifique à l'utilisateur

@@ -6,6 +6,8 @@
     ../../modules/profiles/gaming.nix
     ../../modules/profiles/networking.nix
     ../../modules/profiles/ai-server.nix
+    ../../modules/users/mfo.nix
+    ../../modules/users/dfo.nix
   ];
 
   networking.hostName = hostVars.hostname;
@@ -15,19 +17,9 @@
 
   services.greetd.enable = lib.mkForce false;
 
-  users.users.mfo = {
-    isNormalUser = true;
-    description = "Mickaël Folio";
-    extraGroups = [ "wheel" "networkmanager" "video" "audio" ];
-    hashedPasswordFile = config.sops.secrets."ms-s1-max/users/mfo-password-hash".path;
-  };
-
-  users.users.dfo = {
-    isNormalUser = true;
-    description = "Delphine Folio";
-    extraGroups = [ "wheel" "networkmanager" "video" "audio" ];
-    hashedPasswordFile = config.sops.secrets."ms-s1-max/users/dfo-password-hash".path;
-  };
+  # Per-host sops password overrides — base user attrs come from modules/users/mfo.nix and dfo.nix.
+  users.users.mfo.hashedPasswordFile = config.sops.secrets."ms-s1-max/users/mfo-password-hash".path;
+  users.users.dfo.hashedPasswordFile = config.sops.secrets."ms-s1-max/users/dfo-password-hash".path;
 
   infra.security.sops = {
     enable = true;
@@ -36,19 +28,19 @@
 
   sops.secrets = {
     "ms-s1-max/bootstrap/mfo-password" = {
-      key = "hosts.ms-s1-max.users.mfo.bootstrapPassword";
+      key  = "hosts.ms-s1-max.users.mfo.bootstrapPassword";
       mode = "0400";
     };
     "ms-s1-max/bootstrap/dfo-password" = {
-      key = "hosts.ms-s1-max.users.dfo.bootstrapPassword";
+      key  = "hosts.ms-s1-max.users.dfo.bootstrapPassword";
       mode = "0400";
     };
     "ms-s1-max/users/mfo-password-hash" = {
-      key = "hosts.ms-s1-max.users.mfo.passwordHash";
+      key            = "hosts.ms-s1-max.users.mfo.passwordHash";
       neededForUsers = true;
     };
     "ms-s1-max/users/dfo-password-hash" = {
-      key = "hosts.ms-s1-max.users.dfo.passwordHash";
+      key            = "hosts.ms-s1-max.users.dfo.passwordHash";
       neededForUsers = true;
     };
   };

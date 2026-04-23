@@ -41,6 +41,9 @@ in
 
     mac-mini = [ ];
 
+    homelab = [ ];
+    sandbox = [ ];
+
     azure-ext = [
       { stack = "uptime-kuma"; instance = "uptime-kuma-public"; }
     ];

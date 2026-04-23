@@ -13,6 +13,10 @@
   i18n.defaultLocale = hostVars.locale;
   system.stateVersion = "24.11";
 
+  # QWERTY keyboard — console (TTY) and X11/Wayland.
+  console.keyMap              = "us";
+  services.xserver.xkb.layout = "us";
+
   # EFI systemd-boot — matches the disko ESP layout at /boot.
   boot.loader.systemd-boot.enable      = true;
   boot.loader.efi.canTouchEfiVariables = true;

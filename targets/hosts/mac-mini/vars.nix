@@ -4,4 +4,5 @@
   username = "mickael";       # primary interactive user / nix-homebrew owner
   hostname = "mac-mini";
   platform = "darwin";
+  timezone = "Asia/Bangkok";  # see: timedatectl list-timezones
 }

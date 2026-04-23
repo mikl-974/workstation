@@ -16,76 +16,93 @@
 #
 # `mac-mini` is the Darwin workstation managed via nix-darwin. It currently
 # hosts no stack but is modeled here for completeness and future assignments.
+#
+# `homelab` is a local KVM VM dedicated to self-hosted services.
+# `sandbox` is a local KVM VM for testing apps before deployment.
 {
   targets = {
     main = {
-      kind = "nixosHost";
+      kind    = "nixosHost";
       runtime = "nixos-systemd";
       address = "main";
-      region = "home-lan";
+      region  = "home-lan";
     };
 
     laptop = {
-      kind = "nixosHost";
+      kind    = "nixosHost";
       runtime = "nixos-systemd";
       address = "laptop";
-      region = "home-lan";
+      region  = "home-lan";
     };
 
     gaming = {
-      kind = "nixosHost";
+      kind    = "nixosHost";
       runtime = "nixos-systemd";
       address = "gaming";
-      region = "home-lan";
+      region  = "home-lan";
     };
 
     ms-s1-max = {
-      kind = "nixosHost";
+      kind    = "nixosHost";
       runtime = "nixos-systemd";
       address = "ms-s1-max";
-      region = "home-lan";
+      region  = "home-lan";
     };
 
     openclaw-vm = {
-      kind = "nixosHost";
+      kind    = "nixosHost";
       runtime = "nixos-systemd";
       address = "openclaw-vm";
-      region = "home-lan";
+      region  = "home-lan";
+    };
+
+    homelab = {
+      kind    = "nixosHost";
+      runtime = "nixos-systemd";
+      address = "homelab";
+      region  = "home-lan";
+    };
+
+    sandbox = {
+      kind    = "nixosHost";
+      runtime = "nixos-systemd";
+      address = "sandbox";
+      region  = "home-lan";
     };
 
     contabo = {
-      kind = "nixosHost";
+      kind    = "nixosHost";
       runtime = "dokploy";
       address = "contabo";
-      region = "eu-central";
+      region  = "eu-central";
     };
 
     mac-mini = {
-      kind = "darwinHost";
+      kind    = "darwinHost";
       runtime = "nix-darwin";
       address = "mac-mini";
-      region = "home-lan";
+      region  = "home-lan";
     };
 
     azure-ext = {
-      kind = "azureContainerApps";
+      kind    = "azureContainerApps";
       runtime = "tofu";
       address = "azure-ext";
-      region = "westeurope";
+      region  = "westeurope";
     };
 
     cloudflare-ext = {
-      kind = "cloudflareContainers";
+      kind    = "cloudflareContainers";
       runtime = "tofu";
       address = "cloudflare-ext";
-      region = "global";
+      region  = "global";
     };
 
     gcp-ext = {
-      kind = "gcpCloudRun";
+      kind    = "gcpCloudRun";
       runtime = "tofu";
       address = "gcp-ext";
-      region = "europe-west1";
+      region  = "europe-west1";
     };
   };
 }

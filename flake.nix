@@ -156,6 +156,16 @@
           vars   = import ./targets/hosts/contabo/vars.nix;
           modules = [ disko.nixosModules.disko ./targets/hosts/contabo/default.nix ./targets/hosts/contabo/disko.nix ];
         };
+
+        homelab = mkHost {
+          vars   = import ./targets/hosts/homelab/vars.nix;
+          modules = [ disko.nixosModules.disko ./targets/hosts/homelab/default.nix ./targets/hosts/homelab/disko.nix ];
+        };
+
+        sandbox = mkHost {
+          vars   = import ./targets/hosts/sandbox/vars.nix;
+          modules = [ disko.nixosModules.disko ./targets/hosts/sandbox/default.nix ./targets/hosts/sandbox/disko.nix ];
+        };
       };
 
       darwinConfigurations = {

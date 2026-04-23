@@ -28,4 +28,7 @@
   infra.networking.firewallServer.enable = true;
   infra.networking.tailscale.enable = true;
   infra.users.admin.enable = true;
+
+  # QWERTY console — useful for physical access and emergency recovery.
+  console.keyMap = "us";
 }

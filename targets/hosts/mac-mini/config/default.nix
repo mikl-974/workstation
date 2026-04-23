@@ -9,6 +9,7 @@
   ];
 
   networking.hostName = hostVars.hostname;
+  time.timeZone = hostVars.timezone;
 
   system.defaults = {
     dock.autohide = true;

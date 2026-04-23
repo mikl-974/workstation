@@ -7,6 +7,6 @@
   username = "openclaw";         # operator account for this VM
   hostname = "openclaw-vm";      # hostname — matches nixosConfigurations key in flake.nix
   disk     = "/dev/DEFINE_DISK"; # target disk for disko / NixOS Anywhere — often /dev/vda in a VM
-  timezone = "Europe/Paris";     # see: timedatectl list-timezones
-  locale   = "fr_FR.UTF-8";      # system locale
+  timezone = "Asia/Bangkok";     # see: timedatectl list-timezones
+  locale   = "en_US.UTF-8";      # system locale
 }

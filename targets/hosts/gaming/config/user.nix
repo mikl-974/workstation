@@ -1,7 +1,4 @@
-{ hostVars, ... }:
+{ ... }:
 {
-  users.users.${hostVars.username} = {
-    isNormalUser = true;
-    extraGroups = [ "wheel" "networkmanager" "video" "audio" ];
-  };
+  imports = [ ../../../../modules/users/mikl.nix ];
 }

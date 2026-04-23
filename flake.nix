@@ -1,8 +1,21 @@
 {
   description = "Infra monorepo for machines, users, stacks, dotfiles, and reusable Nix modules";
 
+  nixConfig = {
+    extra-substituters      = [ "https://noctalia.cachix.org" ];
+    extra-trusted-public-keys = [ "noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4=" ];
+  };
+
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+
+    # Noctalia requires nixpkgs-unstable (latest Quickshell dependency).
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
+
+    noctalia = {
+      url = "github:noctalia-dev/noctalia-shell";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
 
     foundation = {
       url = "github:mikl-974/foundation";
@@ -54,7 +67,7 @@
     };
   };
 
-  outputs = inputs@{ self, nixpkgs, foundation, disko, home-manager, sops-nix, nix-openclaw, nix-darwin, nix-homebrew, ... }:
+  outputs = inputs@{ self, nixpkgs, foundation, disko, home-manager, sops-nix, nix-openclaw, nix-darwin, nix-homebrew, noctalia, ... }:
     let
       lib = nixpkgs.lib;
       systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
@@ -85,12 +98,16 @@
 
       # Build a NixOS host from its vars.nix and host-specific modules.
       mkHost = { vars, modules }:
+        let
+          hostSystem = if vars ? system then vars.system else "x86_64-linux";
+        in
         lib.nixosSystem {
           system = vars.system or "x86_64-linux";
           specialArgs = {
             hostVars = vars;
             flakeSelf = self;
             flakeInputs = inputs;
+            inherit inputs;
           };
           modules = sharedModules ++ [
             {
@@ -99,6 +116,7 @@
               home-manager.extraSpecialArgs = {
                 hostVars = vars;
                 targetName = vars.hostname;
+                inherit inputs;
               };
               home-manager.users = mkHomeUsers vars;
             }
@@ -168,6 +186,8 @@
       # the configuration, which remains in flake.nix, targets/hosts/, home/, stacks/, and modules/.
       apps = lib.genAttrs systems (system:
         let pkgs = import nixpkgs { inherit system; };
+            # writeTextFile preserves the original shebang (#!/usr/bin/env bash),
+            # unlike writeShellScript which prepends #!/bin/sh and breaks BASH_SOURCE.
             mkApp = script: {
               type = "app";
               # Preserve the original shebang so BASH_SOURCE/path resolution

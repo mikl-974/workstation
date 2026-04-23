@@ -7,6 +7,7 @@
     imports = [
       ../users/mikl.nix
       ../roles/desktop-hyprland.nix
+      ../roles/noctalia.nix
     ];
   };
 }

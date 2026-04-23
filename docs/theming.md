@@ -2,7 +2,66 @@
 
 ## Architecture
 
-Le theming de la workstation est structure en deux couches :
+Le theming repose sur **Noctalia Shell**, un shell desktop complet (barre, launcher, control center) basé sur Quickshell.
+
+| Couche | Localisation | Rôle |
+|---|---|---|
+| Module système | `modules/theming/noctalia.nix` | Packages GTK/curseur, env vars, activation |
+| Module Home Manager | `home/roles/noctalia.nix` | Configuration Noctalia (barre, couleurs, widgets) via le module HM officiel |
+
+## Activation
+
+Noctalia est activé dans `profiles/desktop-hyprland.nix` :
+
+```nix
+workstation.theming.noctalia.enable = true;
+```
+
+Tous les hosts qui importent `desktop-hyprland.nix` héritent de Noctalia.
+
+## Module système (`modules/theming/noctalia.nix`)
+
+Installe le package `noctalia-shell` depuis le flake input, plus les packages GTK/curseur.
+Configure `GTK_THEME=Adwaita:dark`.
+
+## Module Home Manager (`home/roles/noctalia.nix`)
+
+Importe `inputs.noctalia.homeModules.default` et configure :
+- Position de la barre, type, widgets
+- Schéma de couleurs (prédéfini Rose Pine)
+- Paramètres de localisation
+
+La configuration est entièrement déclarative — pas de fichiers dotfiles manuels.
+
+## Flake input
+
+```nix
+noctalia = {
+  url = "github:noctalia-dev/noctalia-shell";
+  inputs.nixpkgs.follows = "nixpkgs-unstable";
+};
+```
+
+Cache binaire configuré dans `nixConfig` du flake.
+
+## Intégration Hyprland
+
+- `exec-once = noctalia-shell` dans `dotfiles/hypr/hyprland.conf`
+- `bind = $mod, Space, exec, noctalia-shell ipc call launcher toggle`
+
+## Qt software rendering
+
+Sur les machines sans accélération GPU :
+
+```nix
+QT_QUICK_BACKEND = "software";  # dans modules/desktop/hyprland.nix
+```
+
+## Modifier la configuration
+
+Éditer `home/roles/noctalia.nix` — section `programs.noctalia-shell.settings`.
+
+Documentation officielle : https://docs.noctalia.dev/
 
 | Couche | Localisation | Role |
 |---|---|---|

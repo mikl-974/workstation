@@ -9,5 +9,6 @@
     xdg-utils
     file
     ripgrep
+    chromium
   ];
 }

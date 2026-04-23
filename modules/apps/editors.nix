@@ -17,11 +17,7 @@
   environment.systemPackages = with pkgs; [
     # Lightweight editor / general web and scripting work
     vscode
-
-    # .NET / C# IDE — full IDE for .NET projects
     jetbrains.rider
-
-    # JavaScript / TypeScript / frontend IDE
     jetbrains.webstorm
   ];
 }

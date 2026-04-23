@@ -90,7 +90,7 @@ Vérifications effectuées :
 - Aucun placeholder `DEFINE_` dans les fichiers structurants
 - Fichiers critiques présents (`default.nix`, `disko.nix`)
 - `flake.nix` expose bien le host
-- `home/users/default.nix` présent
+- la composition Home Manager active (`home/targets/<host>.nix` ou, en compatibilité, `home/users/default.nix`) présent
 
 ### 3a. Installer via NixOS Anywhere
 
@@ -117,7 +117,7 @@ Les dotfiles sont gérés par Home Manager, intégré dans le système NixOS.
 
 Ajouter un dotfile :
 1. Placer le fichier dans `dotfiles/<app>/`
-2. L'enregistrer dans `home/users/default.nix` :
+2. L'enregistrer dans la composition Home Manager active (`home/targets/<host>.nix` ou, en compatibilité, `home/users/default.nix`) :
    ```nix
    home.file.".config/foot/foot.ini".source = ../dotfiles/foot/foot.ini;
    ```

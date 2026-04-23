@@ -34,8 +34,6 @@ HOST_DIR="$REPO_ROOT/targets/hosts/$HOST"
 VARS_FILE="$(host_vars_file "$REPO_ROOT" "$HOST")"
 DEFAULT_FILE="$(host_default_file "$REPO_ROOT" "$HOST")"
 DISKO_FILE="$(host_disko_file "$REPO_ROOT" "$HOST")"
-HOME_FILE="$REPO_ROOT/home/users/default.nix"
-
 SYSTEM=""
 USERNAME=""
 HOSTNAME_VAL=""
@@ -174,7 +172,13 @@ fi
 echo ""
 echo -e "${BLD}── Absence de placeholders dans les fichiers structurants${RST}"
 FOUND_PLACEHOLDERS=0
-for file in "$REPO_ROOT/flake.nix" "$VARS_FILE" "$DEFAULT_FILE" "$DISKO_FILE" "$HOME_FILE"; do
+for file in \
+  "$REPO_ROOT/flake.nix" \
+  "$VARS_FILE" \
+  "$DEFAULT_FILE" \
+  "$DISKO_FILE" \
+  "$(home_target_file "$REPO_ROOT" "$HOST")" \
+  "$(home_fallback_file "$REPO_ROOT")"; do
   [[ -f "$file" ]] || continue
   rel="${file#"$REPO_ROOT/"}"
   while IFS= read -r match; do
@@ -189,8 +193,8 @@ fi
 
 echo ""
 echo -e "${BLD}── Dotfiles activés par Home Manager${RST}"
-if [[ -f "$HOME_FILE" ]]; then
-  ok "home/users/default.nix existe"
+if [[ -f "$(home_target_file "$REPO_ROOT" "$HOST")" ]]; then
+  ok "home/targets/$HOST.nix existe — composition Home Manager target-specific détectée"
   DOTFILES_FOUND=0
   while IFS= read -r relpath; do
     [[ -z "$relpath" ]] && continue
@@ -198,15 +202,27 @@ if [[ -f "$HOME_FILE" ]]; then
     if [[ -e "$REPO_ROOT/dotfiles/$relpath" ]]; then
       ok "dotfiles/$relpath → existe"
     else
-      fail "dotfiles/$relpath référencé dans home/users/default.nix mais introuvable"
+      fail "dotfiles/$relpath référencé dans home/targets/$HOST.nix ou ses imports mais introuvable"
     fi
-  done < <(collect_active_dotfiles "$HOME_FILE")
+  done < <(collect_active_dotfiles_for_host "$REPO_ROOT" "$HOST")
+elif [[ -f "$(home_fallback_file "$REPO_ROOT")" ]]; then
+  ok "home/users/default.nix existe — fallback legacy disponible"
+  DOTFILES_FOUND=0
+  while IFS= read -r relpath; do
+    [[ -z "$relpath" ]] && continue
+    DOTFILES_FOUND=$(( DOTFILES_FOUND + 1 ))
+    if [[ -e "$REPO_ROOT/dotfiles/$relpath" ]]; then
+      ok "dotfiles/$relpath → existe"
+    else
+      fail "dotfiles/$relpath référencé dans home/users/default.nix ou ses imports mais introuvable"
+    fi
+  done < <(collect_active_dotfiles_for_host "$REPO_ROOT" "$HOST")
 
   if [[ $DOTFILES_FOUND -eq 0 ]]; then
-    warn "Aucun dotfile actif référencé dans home/users/default.nix"
+    warn "Aucun dotfile actif détecté dans la composition Home Manager"
   fi
 else
-  fail "home/users/default.nix manquant"
+  fail "Aucune composition Home Manager trouvée (ni home/targets/$HOST.nix, ni fallback home/users/default.nix)"
 fi
 
 echo ""

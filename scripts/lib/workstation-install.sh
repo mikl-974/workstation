@@ -52,6 +52,14 @@ host_disko_file() {
   printf '%s/targets/hosts/%s/disko.nix\n' "$1" "$2"
 }
 
+home_target_file() {
+  printf '%s/home/targets/%s.nix\n' "$1" "$2"
+}
+
+home_fallback_file() {
+  printf '%s/home/users/default.nix\n' "$1"
+}
+
 host_exists() {
   local repo_root="$1"
   local host="$2"
@@ -93,7 +101,7 @@ collect_active_dotfiles() {
     return 0
   fi
 
-  sed -nE 's/^[[:space:]]*".*"[.]source[[:space:]]*=[[:space:]]*(\.\.\/)+dotfiles\/([^;[:space:]]+);[[:space:]]*$/\2/p' "$home_file"
+  sed -nE 's/^[[:space:]]*([[:alnum:]_.-]+\.)?"[^"]+"[.]source[[:space:]]*=[[:space:]]*(lib\.mkForce[[:space:]]+)?(\.\.\/)+dotfiles\/([^;[:space:]]+);[[:space:]]*$/\4/p' "$home_file"
 }
 
 collect_home_file_mappings() {
@@ -103,7 +111,117 @@ collect_home_file_mappings() {
     return 0
   fi
 
-  sed -nE 's/^[[:space:]]*"([^"]+)"[.]source[[:space:]]*=[[:space:]]*(\.\.\/)+dotfiles\/([^;[:space:]]+);[[:space:]]*$/\1|\3/p' "$home_file"
+  sed -nE 's/^[[:space:]]*([[:alnum:]_.-]+\.)?"([^"]+)"[.]source[[:space:]]*=[[:space:]]*(lib\.mkForce[[:space:]]+)?(\.\.\/)+dotfiles\/([^;[:space:]]+);[[:space:]]*$/\2|\5/p' "$home_file"
+}
+
+collect_imported_nix_paths() {
+  local nix_file="$1"
+
+  if [[ ! -f "$nix_file" ]]; then
+    return 0
+  fi
+
+  grep -oE '(\.\.?/[^[:space:];]+\.nix)' "$nix_file" || true
+}
+
+collect_target_user_imports() {
+  local target_file="$1"
+  local user="$2"
+
+  if [[ ! -f "$target_file" ]]; then
+    return 0
+  fi
+
+  awk -v user="$user" '
+    $0 ~ "^[[:space:]]*" user "[[:space:]]*=[[:space:]]*\\{" { in_user = 1; next }
+    in_user && $0 ~ "^[[:space:]]*\\};[[:space:]]*$" { in_user = 0; next }
+    in_user {
+      while (match($0, /(\.\.?\/[^[:space:];]+\.nix)/, m)) {
+        print m[1]
+        $0 = substr($0, RSTART + RLENGTH)
+      }
+    }
+  ' "$target_file"
+}
+
+declare -gA __home_nix_visited=()
+
+_collect_home_nix_tree_recursive() {
+  local entry="$1"
+  local resolved
+  resolved="$(realpath -m "$entry")"
+
+  [[ -f "$resolved" ]] || return 0
+  if [[ -n "${__home_nix_visited[$resolved]:-}" ]]; then
+    return 0
+  fi
+  __home_nix_visited["$resolved"]=1
+
+  while IFS= read -r rel_import; do
+    [[ -z "$rel_import" ]] && continue
+    _collect_home_nix_tree_recursive "$(dirname "$resolved")/$rel_import"
+  done < <(collect_imported_nix_paths "$resolved")
+
+  printf '%s\n' "$resolved"
+}
+
+list_home_nix_files_for_host() {
+  local repo_root="$1"
+  local host="$2"
+  local target_file
+  target_file="$(home_target_file "$repo_root" "$host")"
+
+  __home_nix_visited=()
+  if [[ -f "$target_file" ]]; then
+    _collect_home_nix_tree_recursive "$target_file"
+  else
+    _collect_home_nix_tree_recursive "$(home_fallback_file "$repo_root")"
+  fi
+}
+
+list_home_nix_files_for_host_user() {
+  local repo_root="$1"
+  local host="$2"
+  local user="$3"
+  local target_file
+  target_file="$(home_target_file "$repo_root" "$host")"
+
+  __home_nix_visited=()
+  if [[ -f "$target_file" ]]; then
+    local found=0
+    while IFS= read -r rel_import; do
+      [[ -z "$rel_import" ]] && continue
+      found=1
+      _collect_home_nix_tree_recursive "$(dirname "$target_file")/$rel_import"
+    done < <(collect_target_user_imports "$target_file" "$user")
+
+    if [[ $found -eq 1 ]]; then
+      return 0
+    fi
+  fi
+
+  _collect_home_nix_tree_recursive "$(home_fallback_file "$repo_root")"
+}
+
+collect_active_dotfiles_for_host() {
+  local repo_root="$1"
+  local host="$2"
+
+  while IFS= read -r nix_file; do
+    [[ -z "$nix_file" ]] && continue
+    collect_active_dotfiles "$nix_file"
+  done < <(list_home_nix_files_for_host "$repo_root" "$host") | sort -u
+}
+
+collect_home_file_mappings_for_host_user() {
+  local repo_root="$1"
+  local host="$2"
+  local user="$3"
+
+  while IFS= read -r nix_file; do
+    [[ -z "$nix_file" ]] && continue
+    collect_home_file_mappings "$nix_file"
+  done < <(list_home_nix_files_for_host_user "$repo_root" "$host" "$user") | awk -F'|' '!seen[$1]++'
 }
 
 is_placeholder_value() {

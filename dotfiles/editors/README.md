@@ -1,6 +1,6 @@
 # Editor configuration
 #
-# Files in this directory are managed by Home Manager (home/users/default.nix).
+# Files in this directory are managed by Home Manager (home/roles/*.nix, home/users/*.nix, or home/targets/*.nix).
 #
 # Typical contents:
 #   vscode/settings.json         — VS Code user settings

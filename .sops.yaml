@@ -1,0 +1,7 @@
+keys:
+  - &admin_mfo age1j9nearzgw8k859r0re0r4uzejxr67sg5glfhnhrzuu5e5f63pyesyvdche
+creation_rules:
+  - path_regex: secrets/.*\.(yaml|yml|json|env|ini)$
+    key_groups:
+      - age:
+          - *admin_mfo

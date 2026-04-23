@@ -27,7 +27,6 @@ in
 
   config = lib.mkIf cfg.enable ({
     sops.age.keyFile = cfg.ageKeyFile;
-    sops.validateSopsFiles = false;
   } // lib.optionalAttrs (cfg.defaultSopsFile != null) {
     sops.defaultSopsFile = cfg.defaultSopsFile;
     sops.defaultSopsFormat = cfg.defaultSopsFormat;

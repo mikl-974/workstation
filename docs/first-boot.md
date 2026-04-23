@@ -91,7 +91,7 @@ Les dotfiles effectivement branches par Home Manager sont :
 
 Ils sont lies depuis :
 
-- `home/users/default.nix`
+- la composition Home Manager active (`home/targets/<host>.nix` ou, en compatibilité, `home/users/default.nix`)
 
 ## Parcours premier login
 
@@ -127,13 +127,13 @@ which thunar
 Regle stricte :
 
 - `modules/` -> installation et activation systeme
-- `home/users/default.nix` -> fichiers utilisateur actifs
+- la composition Home Manager active (`home/targets/<host>.nix` ou, en compatibilité, `home/users/default.nix`) -> fichiers utilisateur actifs
 - `dotfiles/` -> contenu applicatif brut
 
 Concretement :
 
 - ne pas mettre les bindings Hyprland dans un module Nix
-- ne pas mettre le contenu d'un fichier `config` dans `home/users/default.nix`
+- ne pas mettre le contenu d'un fichier `config` dans la composition Home Manager active (`home/targets/<host>.nix` ou, en compatibilité, `home/users/default.nix`)
 - ne pas utiliser `dotfiles/` pour de la logique systeme
 
 ## Verification et remediation
@@ -148,7 +148,7 @@ Si un point critique manque :
 
 - relancer `sudo nixos-rebuild switch --flake .#main`
 - relancer `nix run .#post-install-check -- --host main`
-- vérifier `home/users/default.nix` et les dotfiles réellement référencés
+- vérifier la composition Home Manager active (`home/targets/<host>.nix` ou, en compatibilité, `home/users/default.nix`) et les dotfiles réellement référencés
 - vérifier que le host importe bien les profils attendus
 
 ## Etendre proprement
@@ -157,7 +157,7 @@ Si la couche UX doit evoluer :
 
 1. installer les nouvelles apps dans le bon module
 2. ajouter leur config brute dans `dotfiles/<app>/`
-3. lier explicitement le fichier dans `home/users/default.nix`
+3. lier explicitement le fichier dans la composition Home Manager active (`home/targets/<host>.nix` ou, en compatibilité, `home/users/default.nix`)
 4. documenter l'integration
 
 Ne pas :

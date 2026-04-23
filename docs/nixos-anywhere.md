@@ -140,7 +140,8 @@ targets/hosts/main/default.nix  configuration du host (boot, hostname, profils, 
 targets/hosts/main/disko.nix    layout disque (GPT + EFI + btrfs) — lit le disque depuis vars.nix
 modules/profiles/       profils assembles par les targets (desktop-hyprland, dev, networking, gaming, ai)
 modules/                modules Nix
-home/users/default.nix        configuration Home Manager (dotfiles, programmes)
+home/targets/<host>.nix       composition Home Manager recommandée par host
+home/users/default.nix        fallback legacy temporaire pour les hosts non migrés
 dotfiles/               fichiers de configuration bruts
 scripts/                init-host, show-config, doctor, validate-install, install-anywhere, install-manual, post-install-check
 templates/host-vars.nix template de vars.nix pour un nouveau host

@@ -47,13 +47,10 @@ EXPECTED_USER_HOME=""
 HOST_CONTEXT_AVAILABLE=false
 EXPECT_DESKTOP=false
 EXPECT_NETWORKING=false
-HOME_FILE=""
-
 if [[ -n "$REPO_ROOT" && -f "$REPO_ROOT/flake.nix" && -f "$REPO_ROOT/targets/hosts/$HOST_NAME/vars.nix" ]]; then
   HOST_CONTEXT_AVAILABLE=true
   HOST_VARS_FILE="$REPO_ROOT/targets/hosts/$HOST_NAME/vars.nix"
   HOST_DEFAULT_FILE="$REPO_ROOT/targets/hosts/$HOST_NAME/default.nix"
-  HOME_FILE="$REPO_ROOT/home/users/default.nix"
   EXPECTED_USER="$(read_nix_string_var "$HOST_VARS_FILE" "username")"
   host_has_profile "$REPO_ROOT" "$HOST_NAME" "desktop-hyprland" && EXPECT_DESKTOP=true
   host_has_profile "$REPO_ROOT" "$HOST_NAME" "networking" && EXPECT_NETWORKING=true
@@ -181,13 +178,13 @@ if [[ -n "$EXPECTED_USER_HOME" ]]; then
   fi
 fi
 
-if [[ -n "$EXPECTED_USER_HOME" && -f "$HOME_FILE" ]]; then
+if [[ -n "$EXPECTED_USER_HOME" && -n "$REPO_ROOT" && -n "$EXPECTED_USER" ]]; then
   while IFS='|' read -r destination source_rel; do
     [[ -z "$destination" ]] && continue
     check_dotfile "$EXPECTED_USER_HOME" "$destination" "$source_rel"
-  done < <(collect_home_file_mappings "$HOME_FILE")
+  done < <(collect_home_file_mappings_for_host_user "$REPO_ROOT" "$HOST_NAME" "$EXPECTED_USER")
 else
-  warn "Impossible de vérifier les dotfiles actifs contre home/users/default.nix"
+  warn "Impossible de vérifier les dotfiles actifs contre la composition Home Manager du host"
 fi
 
 echo ""
@@ -199,7 +196,11 @@ if [[ "$EXPECT_DESKTOP" == true ]]; then
   check_binary "wofi" "Launcher wofi"
   check_binary "mako" "Notifications mako"
   check_binary "cliphist" "Clipboard history"
-  check_binary "firefox" "Navigateur web"
+  if command -v chromium &>/dev/null || command -v firefox &>/dev/null; then
+    ok "Navigateur web disponible (chromium ou firefox)"
+  else
+    fail "Navigateur web introuvable (ni chromium, ni firefox)"
+  fi
   check_binary "thunar" "Gestionnaire de fichiers"
 
   if systemctl is-enabled greetd &>/dev/null 2>&1 || systemctl is-active greetd &>/dev/null 2>&1; then

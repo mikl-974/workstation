@@ -15,7 +15,7 @@ La base desktop Hyprland est organisee ainsi :
   - `modules/desktop/warp.nix`
   - `modules/apps/daily.nix`
   - `modules/apps/utilities.nix`
-  - `home/users/default.nix`
+  - la composition Home Manager active (`home/targets/<host>.nix` ou, en compatibilité, `home/users/default.nix`)
   - `dotfiles/hyprland/hyprland.conf`
   - `dotfiles/launchers/`
   - `dotfiles/terminal/`
@@ -111,7 +111,7 @@ Repartition retenue :
 |---|---|
 | `modules/desktop/hyprland.nix` | active Hyprland et les paquets Wayland de base |
 | `modules/apps/daily.nix` | installe `mako` et `cliphist` comme apps desktop |
-| `home/users/default.nix` | lie les fichiers utilisateur actifs |
+| la composition Home Manager active (`home/targets/<host>.nix` ou, en compatibilité, `home/users/default.nix`) | lie les fichiers utilisateur actifs |
 | `dotfiles/hyprland/hyprland.conf` | autostart et bindings Hyprland |
 | `dotfiles/launchers/` | comportement et style du launcher |
 | `dotfiles/terminal/` | configuration du terminal |

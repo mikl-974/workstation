@@ -47,7 +47,7 @@ dotfiles/themes/noctalia/
   foot/                snippet couleurs foot (inclus dans foot.ini)
 ```
 
-Les fichiers de ce dossier sont lies par Home Manager (`home/users/default.nix`).
+Les fichiers de ce dossier sont lies par Home Manager (la composition Home Manager active (`home/targets/<host>.nix` ou, en compatibilité, `home/users/default.nix`)).
 
 ## Etendre Noctalia
 
@@ -58,7 +58,7 @@ Dans `modules/theming/noctalia.nix`, section `environment.systemPackages`.
 ### Ajouter un fichier de theme applicatif
 
 1. Placer le fichier dans `dotfiles/themes/noctalia/`
-2. L'enregistrer dans `home/users/default.nix` via `home.file`
+2. L'enregistrer dans la composition Home Manager active (`home/targets/<host>.nix` ou, en compatibilité, `home/users/default.nix`) via `home.file`
 
 ### Changer le theme GTK
 

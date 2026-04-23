@@ -2,6 +2,7 @@
 {
   home.file = {
     ".config/hypr/hyprland.conf".source = ../../dotfiles/hyprland/hyprland.conf;
+    ".config/hypr/profile.conf".source = ../../dotfiles/hyprland/profiles/default.conf;
     ".config/foot/foot.ini".source = ../../dotfiles/terminal/foot.ini;
     ".config/wofi/config".source = ../../dotfiles/launchers/config;
     ".config/wofi/style.css".source = ../../dotfiles/launchers/style.css;

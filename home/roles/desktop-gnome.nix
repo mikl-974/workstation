@@ -1,5 +1,8 @@
 { ... }:
 {
+  xdg.configFile."gtk-3.0/settings.ini".source = ../../dotfiles/themes/noctalia/gtk/settings.ini;
+  xdg.configFile."gtk-4.0/settings.ini".source = ../../dotfiles/themes/noctalia/gtk/settings.ini;
+
   dconf.settings = {
     "org/gnome/desktop/interface" = {
       color-scheme = "prefer-dark";

@@ -1,14 +1,13 @@
 # infra (repo Git: `workstation`)
 
-Ce repo est désormais traité comme un monorepo `infra` :
+Ce repo est traité comme un monorepo `infra` :
 une seule base pour les briques Nix réutilisables, les machines concrètes,
 la composition utilisateur, les dotfiles, les services et les secrets.
 
 ## Structure retenue
 
 - `modules/` : briques composables réutilisables
-- `targets/` : cibles concrètes
-  - `targets/hosts/` : machines réelles
+- `targets/hosts/` : machines réelles
 - `home/` : composition Home Manager (`users/`, `roles/`, `targets/`)
 - `dotfiles/` : bibliothèque de configs applicatives réutilisables
 - `stacks/` : services/applications portés par ce repo
@@ -16,29 +15,44 @@ la composition utilisateur, les dotfiles, les services et les secrets.
 - `docs/` : documentation
 - `scripts/` : orchestration légère / validation
 
-Voir `docs/repo-structure.md` et `docs/architecture.md`.
+## Flux `sops-nix` réellement branché
 
-## Frontières d’architecture
+Le repo ne se limite plus à "avoir `sops-nix` dans le flake".
 
-- `modules/` = logique réutilisable
-- `targets/hosts/<name>/` = réalité d’une machine
-- `home/` = qui utilise quoi, sur quelle machine
-- `dotfiles/` = contenu brut applicatif, jamais le binding
-- `stacks/` = services/applicatifs, pas composition machine
-- `secrets/` = fondation chiffrée, pas de secrets en clair
+Premier flux réel branché :
+- fichier chiffré : `secrets/hosts/ms-s1-max.yaml`
+- mécanisme : `modules/security/sops.nix`
+- host consommateur : `targets/hosts/ms-s1-max/default.nix`
+- consommation réelle :
+  - `users.users.mfo.hashedPasswordFile`
+  - `users.users.dfo.hashedPasswordFile`
+- secrets runtime root-only aussi exposés pour le bootstrap :
+  - `/run/secrets/ms-s1-max/bootstrap/mfo-password`
+  - `/run/secrets/ms-s1-max/bootstrap/dfo-password`
 
-## Users réels
+Voir `docs/secrets.md`.
 
-Les premiers users posés explicitement sont :
-- `mfo` = Mickaël Folio
-- `dfo` = Delphine Folio
+## Dotfiles réellement branchés
 
-Leurs identités Home Manager sont dans `home/users/`.
-Leur composition finale par machine est dans `home/targets/`.
+### `mfo`
+`mfo` consomme réellement :
+- Hyprland
+- profil Hyprland user (`chromium`)
+- foot
+- wofi
+- mako
+
+### `dfo`
+`dfo` consomme réellement :
+- Kitty
+- profil Kitty user
+- réglages GTK communs Noctalia pour GNOME
+- préférences GNOME utilisateur
+- Firefox avec réglages Home Manager minimaux
+
+Voir `docs/user-composition.md`.
 
 ## Cas concret : `ms-s1-max`
-
-Le target `ms-s1-max` valide le modèle complet.
 
 ### Système machine
 `targets/hosts/ms-s1-max/` déclare :
@@ -47,7 +61,7 @@ Le target `ms-s1-max` valide le modèle complet.
 - Tailscale
 - Cloudflare WARP
 - stack `ai-server`
-- base `sops-nix`
+- `sops-nix`
 
 ### Composition utilisateur
 `home/targets/ms-s1-max.nix` compose :
@@ -55,42 +69,19 @@ Le target `ms-s1-max` valide le modèle complet.
 - `dfo` → GNOME, Lutris, Steam, Firefox, Kitty
 
 ### Limite explicite
-NordVPN est bien une capacité visée pour `ms-s1-max`, mais reste **documentée seulement** tant que `nixpkgs` ne fournit pas de package/module officiel exploitable sur la base retenue.
+NordVPN reste documenté seulement tant que `nixpkgs` ne fournit pas de package/module officiel exploitable sur la base `nixos-unstable` retenue.
 
-## `stacks/` est conservé
+## Legacy réduit, pas cassé brutalement
 
-`stacks/` fait pleinement partie du repo `infra`.
-Il décrit les services/applications portés par ce repo.
+`home/users/default.nix` existe encore comme **fallback de compatibilité transitoire** pour les targets pas encore migrés vers `home/targets/`.
 
-Exemple actuel :
-- `stacks/ai-server/` = service `ollama` côté infra
+Le chemin recommandé est désormais :
+- `home/users/<user>.nix`
+- `home/roles/*.nix`
+- `home/targets/<host>.nix`
 
-La machine qui le porte est choisie dans `targets/hosts/<name>/default.nix` via un profil système (`modules/profiles/ai-server.nix`).
-
-## `sops-nix`
-
-La base secrets retenue est `sops-nix`.
-
-Intégration posée :
-- input flake `sops-nix`
-- module réutilisable `modules/security/sops.nix`
-- activation cible par `infra.security.sops.enable = true;`
-- documentation dans `secrets/README.md`
+Les scripts de validation ne supposent plus uniquement `home/users/default.nix` lorsqu'un target Home Manager dédié existe.
 
 ## Nix unstable
 
 Les packages suivent `nixos-unstable` via l’input `nixpkgs` du `flake.nix`.
-
-## Commandes utiles
-
-```bash
-# init vars d'une machine
-nix run .#init-host -- ms-s1-max
-
-# audit local
-nix run .#doctor -- --host ms-s1-max
-nix run .#validate-install -- ms-s1-max
-
-# afficher la config machine
-nix run .#show-config -- ms-s1-max
-```

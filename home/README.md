@@ -2,30 +2,32 @@
 
 Composition Home Manager des users, rôles et targets.
 
-## Rôle
-
-`home/` est l’endroit où l’on décide :
-- quels users existent côté Home Manager
-- quels rôles leur sont appliqués
-- comment cela varie selon la machine
-- quels dotfiles sont liés
-
 ## Structure
 
 | Dossier | Rôle |
 |---|---|
-| `home/users/` | identité d’un user (`base.nix`, `mfo.nix`, `dfo.nix`) |
-| `home/roles/` | rôles composables (`desktop-hyprland`, `desktop-gnome`, `browser-*`, `gaming-*`, `terminal-kitty`) |
-| `home/targets/` | composition finale par target (`ms-s1-max.nix`) |
+| `home/users/` | identité utilisateur + overrides user utiles |
+| `home/roles/` | binding réutilisable par rôle/app/domaine |
+| `home/targets/` | composition finale d'un host |
 
-## Règle
+## Modèle concret
 
-- `home/users/` ne décide pas seul de la machine
-- `home/roles/` ne contient pas de dotfiles machine-spécifiques cachés
-- `home/targets/` est le binding explicite user/role/target
+### `mfo`
+- identité : `home/users/mfo.nix`
+- rôles : `desktop-hyprland`, `gaming-steam`, `browser-chromium`
+- override réel : `~/.config/hypr/profile.conf`
 
-## Exemple
+### `dfo`
+- identité : `home/users/dfo.nix`
+- rôles : `desktop-gnome`, `gaming-lutris`, `gaming-steam`, `browser-firefox`, `terminal-kitty`
+- overrides réels : `~/.config/kitty/profile.conf` + préférences GNOME utilisateur
 
-`home/targets/ms-s1-max.nix` compose :
-- `mfo` avec Hyprland + Steam + Chromium
-- `dfo` avec GNOME + Lutris + Steam + Firefox + Kitty
+## Legacy
+
+`home/users/default.nix` reste un fallback transitoire pour les anciens hosts.
+Ce n'est plus le chemin recommandé.
+
+Le chemin recommandé est :
+- `home/users/<user>.nix`
+- `home/roles/*.nix`
+- `home/targets/<host>.nix`

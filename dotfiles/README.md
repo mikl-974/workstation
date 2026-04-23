@@ -4,28 +4,24 @@ Bibliothèque réutilisable de configurations applicatives.
 
 ## Règle
 
-Ce dossier contient uniquement du contenu brut applicatif.
-Il n’exprime jamais quel user ou quelle machine consomme un fichier.
+`dotfiles/` contient uniquement du contenu brut applicatif.
+Le binding se fait dans `home/`.
 
-Le binding se fait dans `home/` :
-- `home/roles/` pour les ensembles réutilisables
-- `home/targets/` pour la composition finale par machine
+## Modèle concret actuel
 
-## Structure actuelle
+### Base commune par app/domaine
+- `dotfiles/hyprland/hyprland.conf`
+- `dotfiles/hyprland/profiles/default.conf`
+- `dotfiles/terminal/kitty.conf`
+- `dotfiles/terminal/profiles/default-kitty.conf`
+- `dotfiles/themes/noctalia/gtk/settings.ini`
 
-| Dossier | Rôle |
-|---|---|
-| `dotfiles/hyprland/` | config Hyprland |
-| `dotfiles/terminal/` | configs terminal (`foot.ini`, `kitty.conf`) |
-| `dotfiles/launchers/` | launcher |
-| `dotfiles/notifications/` | notifications |
-| `dotfiles/themes/noctalia/` | assets de thème |
-| `dotfiles/shell/` | shell |
-| `dotfiles/editors/` | éditeurs |
+### Overrides user
+- `dotfiles/hyprland/profiles/mfo.conf`
+- `dotfiles/terminal/profiles/dfo-kitty.conf`
 
-## Multi-user / multi-target
+## Comment ajouter un nouveau dotfile
 
-La flexibilité vient de la séparation suivante :
-- dotfiles = contenu brut
-- roles HM = ensembles réutilisables
-- targets HM = affectation finale par machine
+1. créer le contenu brut dans `dotfiles/`
+2. le lier depuis un rôle si c'est commun
+3. le surcharger depuis `home/users/<user>.nix` seulement si la différence est réellement utilisateur-spécifique

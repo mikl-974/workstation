@@ -2,93 +2,48 @@
 
 ## Principe
 
-Le repo Git s'appelle encore `workstation`, mais son rôle cible est désormais `infra`.
-Il ne sépare plus artificiellement `homelab` et `workstation` :
-la structure interne porte désormais ensemble les machines, les users, les dotfiles,
-les services et les secrets.
+Le repo Git s'appelle encore `workstation`, mais son rôle cible est `infra`.
+Il porte maintenant ensemble :
+- machines
+- users
+- rôles Home Manager
+- dotfiles
+- stacks
+- secrets
 
-## Couches retenues
+## Frontières
 
 | Couche | Rôle | Exemple |
 |---|---|---|
-| `modules/` | briques réutilisables | desktop, shell, theming, profiles, security, devshells |
-| `targets/hosts/` | machines réelles | `main`, `laptop`, `gaming`, `ms-s1-max` |
-| `home/users/` | identité HM d’un user | `mfo.nix`, `dfo.nix` |
-| `home/roles/` | rôles HM composables | `desktop-hyprland.nix`, `browser-firefox.nix` |
-| `home/targets/` | binding final par machine | `ms-s1-max.nix` |
-| `dotfiles/` | contenu brut applicatif | Hyprland, Kitty, Wofi, Mako |
-| `stacks/` | services/applicatifs | `ai-server/` |
-| `secrets/` | secrets chiffrés | base `sops-nix` |
-
-## Règles de composition
-
-### 1. `modules/`
-Contient uniquement des briques réutilisables.
-Il ne contient jamais une machine concrète.
-
-### 2. `targets/hosts/`
-Contient la vérité machine :
-- `vars.nix`
-- `default.nix`
-- `disko.nix` si nécessaire
-
-### 3. `home/`
-Contient la logique utilisateur :
-- `home/users/` = identité
-- `home/roles/` = rôles composables
-- `home/targets/` = composition finale par machine
-
-### 4. `dotfiles/`
-Contient uniquement du contenu brut.
-Le choix de quel user consomme quel dotfile se fait dans `home/`.
-
-### 5. `stacks/`
-Contient des services/applications.
-Une stack peut fournir un module de service, mais ne choisit jamais elle-même la machine cible.
-
-## Flux de composition
-
-1. `targets/hosts/<name>/default.nix` compose des profils système depuis `modules/profiles/`
-2. un profil système peut importer une stack (`modules/profiles/ai-server.nix` → `stacks/ai-server/`)
-3. `flake.nix` choisit la composition Home Manager :
-   - si `home/targets/<hostname>.nix` existe, elle est utilisée
-   - sinon fallback sur `home/users/default.nix`
-4. `home/targets/<hostname>.nix` assigne des users + rôles
-5. les rôles Home Manager lient les dotfiles et ajoutent les apps utilisateur
-
-## Cas de référence : `ms-s1-max`
-
-### Côté système
-`targets/hosts/ms-s1-max/default.nix` active :
-- `desktop-hyprland`
-- `desktop-gnome`
-- `gaming`
-- `networking`
-- `ai-server`
-- `sops-nix`
-
-### Côté users
-`home/targets/ms-s1-max.nix` compose :
-- `mfo` = `desktop-hyprland` + `gaming-steam` + `browser-chromium`
-- `dfo` = `desktop-gnome` + `gaming-lutris` + `gaming-steam` + `browser-firefox` + `terminal-kitty`
-
-## `stacks/` reste dans le repo
-
-`stacks/` fait partie du repo `infra`.
-La frontière est :
-- `modules/` = logique système réutilisable
-- `targets/hosts/` = machines concrètes
-- `stacks/` = services/applicatifs
-- `home/` = composition utilisateur
+| `modules/` | briques réutilisables | desktop, shell, profiles, security |
+| `targets/hosts/` | réalité machine | `ms-s1-max` |
+| `home/users/` | identité d’un user | `mfo.nix`, `dfo.nix` |
+| `home/roles/` | binding réutilisable par usage | `desktop-hyprland.nix`, `terminal-kitty.nix` |
+| `home/targets/` | composition finale par machine | `ms-s1-max.nix` |
+| `dotfiles/` | contenu brut réutilisable | Hyprland, Kitty, GTK |
+| `stacks/` | services/applications | `ai-server/` |
+| `secrets/` | source chiffrée | `secrets/hosts/ms-s1-max.yaml` |
 
 ## Secrets
 
-Le repo retient `sops-nix` comme stratégie secrets.
-La fondation est :
-- input flake `sops-nix`
-- module `modules/security/sops.nix`
-- activation par host via `infra.security.sops.enable`
+Le premier flux réel branché utilise `sops-nix` pour `ms-s1-max` :
+- le YAML chiffré vit dans `secrets/hosts/ms-s1-max.yaml`
+- le host l'active via `infra.security.sops.defaultSopsFile`
+- les hashes de mot de passe sont injectés vers `hashedPasswordFile`
+- les bootstrap passwords sont matérialisés en root-only sous `/run/secrets/ms-s1-max/bootstrap/`
 
-## Nix packages
+## Dotfiles et composition user
 
-Les packages suivent `nixos-unstable` via `nixpkgs`.
+### Base commune
+- `home/roles/desktop-hyprland.nix` lie Hyprland, foot, wofi, mako et le profil Hyprland par défaut
+- `home/roles/desktop-gnome.nix` lie les réglages GTK communs Noctalia
+- `home/roles/terminal-kitty.nix` lie Kitty et un profil Kitty par défaut
+
+### Overrides user
+- `home/users/mfo.nix` remplace `~/.config/hypr/profile.conf` pour passer le navigateur à Chromium
+- `home/users/dfo.nix` remplace `~/.config/kitty/profile.conf` et ajoute des préférences GNOME utilisateur
+
+## Legacy
+
+`home/users/default.nix` reste un fallback de compatibilité pour les anciens hosts.
+Ce n'est plus le chemin recommandé ni le chemin principal pour `ms-s1-max`.

@@ -201,7 +201,17 @@
           install-anywhere   = mkApp ./scripts/install-anywhere.sh;
           install-manual     = mkApp ./scripts/install-manual.sh;
           post-install-check = mkApp ./scripts/post-install-check.sh;
+          validate-inventory = mkApp ./scripts/validate-inventory.sh;
         }
       );
+
+      # Deployment model — strict, machine-readable target → stack assignments.
+      # `inventoryValidation` throws when the inventory violates any contract;
+      # downstream consumers (CI, scripts, agents) can rely on `inventory`,
+      # `topology`, and `stacks` only after this evaluation has succeeded.
+      inventoryValidation = import ./deployments/validation.nix;
+      inventory = (import ./deployments/validation.nix).inventory;
+      topology = (import ./deployments/validation.nix).topology;
+      stacks = (import ./deployments/validation.nix).stacks;
     };
 }

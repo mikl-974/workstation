@@ -5,6 +5,8 @@
   home.username = "dfo";
   home.homeDirectory = "/home/dfo";
 
+  # terminal-kitty.nix provides the default profile.conf; dfo overrides only
+  # the profile layer so Kitty keeps the shared base while changing user prefs.
   home.file.".config/kitty/profile.conf".source = lib.mkForce ../../dotfiles/terminal/profiles/dfo-kitty.conf;
 
   dconf.settings = {

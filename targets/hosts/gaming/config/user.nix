@@ -1,4 +1,4 @@
 { ... }:
 {
-  imports = [ ../../../../modules/users/mikl.nix ];
+  imports = [ ../../../../modules/users/mfo.nix ];
 }

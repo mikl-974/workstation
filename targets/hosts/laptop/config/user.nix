@@ -1,7 +1,7 @@
 { ... }:
 {
-  imports = [ ../../../../modules/users/mikl.nix ];
+  imports = [ ../../../../modules/users/mfo.nix ];
 
   # docker is used on the laptop for local container workflows.
-  users.users.mikl.extraGroups = [ "docker" ];
+  users.users.mfo.extraGroups = [ "docker" ];
 }

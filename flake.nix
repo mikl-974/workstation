@@ -17,7 +17,8 @@
     };
 
     # Home Manager — manages user dotfiles and per-user packages.
-    # Kept on the current release branch for now; nixpkgs itself tracks unstable.
+    # Intentionally kept on the 24.11 release branch for stability while
+    # nixpkgs itself tracks nixos-unstable for package selection.
     home-manager = {
       url = "github:nix-community/home-manager/release-24.11";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -42,6 +43,8 @@
         ./modules/security/sops.nix
       ];
 
+      # Prefer an explicit per-host Home Manager composition when it exists.
+      # Fall back to the legacy single-user file for older hosts not yet migrated.
       mkHomeUsers = vars:
         let
           homeTargetPath = ./. + "/home/targets/${vars.hostname}.nix";

@@ -1,3 +1,7 @@
+#
+# Home Manager composition for the concrete target `ms-s1-max`.
+# This file binds real users from `home/users/` to reusable roles from
+# `home/roles/` without moving machine logic into Home Manager itself.
 {
   mfo = {
     imports = [

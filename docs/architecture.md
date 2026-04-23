@@ -25,6 +25,10 @@ Il porte maintenant ensemble :
 | `stacks/` | services/applications | `ai-server/` |
 | `secrets/` | source chiffrée | `secrets/hosts/ms-s1-max.yaml` |
 
+Le contexte "machine virtuelle" ne crée pas un nouveau type de target :
+- le host reste concret dans `targets/hosts/`
+- la VM est modélisée comme profil réutilisable dans `modules/profiles/virtual-machine.nix`
+
 ## NixOS vs Darwin
 
 Le repo distingue maintenant explicitement :
@@ -33,6 +37,14 @@ Le repo distingue maintenant explicitement :
 
 Un target Darwin reste un target concret dans `targets/hosts/`.
 Il ne devient pas un faux host NixOS.
+
+## Bare metal vs VM
+
+- `bare-metal` et `virtual-machine` décrivent un contexte machine
+- ce ne sont ni des hosts abstraits, ni des modes d'installation
+- un host VM importe `modules/profiles/virtual-machine.nix`
+- `vars.nix` reste réservé aux valeurs opératoires machine-locales (`disk`, `timezone`, etc.)
+- le profil VM ne prend pas en charge `disko.nix`, le disque réel, ni les guest tools hyperviseur-spécifiques
 
 ## NixOS moderne actuel
 
@@ -114,3 +126,8 @@ Le target Darwin `macmini` reste séparé de cette logique Home Manager NixOS.
 - leur parcours NixOS Anywhere est donc préparé structurellement
 - le dernier paramètre volontairement local reste `disk` dans `vars.nix`, à renseigner sur la machine cible
 - `ms-s1-max` reste sur un parcours manuel tant qu'aucun `disko.nix` n'est défini pour ce host
+
+Le même principe vaut pour une VM :
+- le workflow NixOS Anywhere ou manuel reste celui du host concret
+- le profil VM ne remplace pas la nécessité de renseigner le bon disque
+- le choix firmware/réseau/hyperviseur reste un choix du target concret

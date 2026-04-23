@@ -34,6 +34,7 @@ HOST_DIR="$REPO_ROOT/targets/hosts/$HOST"
 VARS_FILE="$(host_vars_file "$REPO_ROOT" "$HOST")"
 DEFAULT_FILE="$(host_default_file "$REPO_ROOT" "$HOST")"
 DISKO_FILE="$(host_disko_file "$REPO_ROOT" "$HOST")"
+MACHINE_CONTEXT="$(host_machine_context "$REPO_ROOT" "$HOST")"
 SYSTEM=""
 USERNAME=""
 HOSTNAME_VAL=""
@@ -180,6 +181,14 @@ if [[ -n "$HOSTNAME_VAL" ]] && ! is_placeholder_value "$HOSTNAME_VAL"; then
 fi
 
 echo ""
+echo -e "${BLD}── Contexte machine${RST}"
+if [[ "$MACHINE_CONTEXT" == "virtual-machine" ]]; then
+  ok "profil VM détecté : modules/profiles/virtual-machine.nix"
+else
+  ok "contexte bare-metal — aucun profil VM détecté"
+fi
+
+echo ""
 echo -e "${BLD}── Absence de placeholders dans les fichiers structurants${RST}"
 FOUND_PLACEHOLDERS=0
 for file in \
@@ -248,6 +257,9 @@ if [[ "$HAS_DISKO" == true ]]; then
       ok "parcours NixOS Anywhere disponible : scripts/install-anywhere.sh"
     else
       warn "parcours NixOS Anywhere branché, mais disque réel encore non renseigné dans vars.nix"
+    fi
+    if [[ "$MACHINE_CONTEXT" == "virtual-machine" ]]; then
+      ok "contexte VM explicite — le workflow reste le même, sans host abstrait ni logique cachée"
     fi
   else
     fail "scripts/install-anywhere.sh manquant"

@@ -100,6 +100,7 @@ for app in init-host show-config validate-install doctor install-anywhere instal
 done
 
 if [[ -n "$HOST" ]]; then
+  MACHINE_CONTEXT="$(host_machine_context "$REPO_ROOT" "$HOST")"
   echo ""
   echo -e "${BLD}── Readiness du host '${HOST}'${RST}"
   if host_exists "$REPO_ROOT" "$HOST"; then
@@ -119,6 +120,12 @@ if [[ -n "$HOST" ]]; then
       fail "$label manquant"
     fi
   done
+
+  if [[ "$MACHINE_CONTEXT" == "virtual-machine" ]]; then
+    ok "Contexte machine : virtual-machine (profil modules/profiles/virtual-machine.nix)"
+  else
+    ok "Contexte machine : bare-metal"
+  fi
 
   if host_uses_disko "$REPO_ROOT" "$HOST"; then
     HOST_DISK="$(read_nix_string_var "$(host_vars_file "$REPO_ROOT" "$HOST")" "disk")"

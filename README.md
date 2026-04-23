@@ -15,6 +15,11 @@ la composition utilisateur, les dotfiles, les services et les secrets.
 - `docs/` : documentation
 - `scripts/` : orchestration légère / validation
 
+Le cas "machine virtuelle" est maintenant modélisé comme un profil réutilisable :
+- `modules/profiles/virtual-machine.nix`
+- un host concret peut l'importer s'il tourne dans une VM
+- ce n'est pas un host abstrait supplémentaire dans `targets/hosts/`
+
 ## Targets concrets actuellement modélisés
 
 ### NixOS
@@ -101,6 +106,14 @@ Parcours NixOS Anywhere réellement prêts en V1 :
 - structure et scripts : `main`, `laptop`, `gaming`
 - prérequis opératoire restant : renseigner le vrai `disk` sur la machine cible avant installation
 - hors périmètre Anywhere actuel : `ms-s1-max` (pas de `disko.nix`)
+
+## VM : règle de modélisation
+
+- un target VM reste un host concret dans `targets/hosts/`
+- le fait "tourne dans une VM" se déclare via `modules/profiles/virtual-machine.nix`
+- le profil VM ne choisit ni `disk`, ni `disko.nix`, ni l'hyperviseur
+- les scripts montrent maintenant explicitement `bare-metal` vs `virtual-machine`
+- à ce stade, aucun host versionné n'importe encore ce profil : l'usage est documenté sans faire semblant qu'un target VM concret existe déjà
 
 ## Users normalisés disponibles
 

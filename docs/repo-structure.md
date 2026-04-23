@@ -27,12 +27,19 @@ Contient des briques réutilisables :
 - sécurité / intégrations transverses
 - helpers et templates
 
+Exemple explicite :
+- `modules/profiles/virtual-machine.nix` = le contexte VM comme profil réutilisable, pas comme host abstrait
+
 ### `targets/`
 Contient la réalité des machines :
 - un host concret dans `targets/hosts/<name>/`
 - ses variables machine
 - sa config NixOS ou Darwin
 - éventuellement son layout disque côté NixOS (`disko.nix`) quand le host doit être installable via NixOS Anywhere
+
+Le fait qu'un target soit bare metal ou VM ne crée pas un nouveau sous-type de host :
+- le host reste concret
+- le contexte VM se déclare par import de `modules/profiles/virtual-machine.nix`
 
 ### `home/`
 Contient la composition utilisateur :

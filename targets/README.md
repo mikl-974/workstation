@@ -19,6 +19,7 @@ Il ne contient jamais :
 - des briques réutilisables
 - des stacks applicatives génériques
 - de la composition Home Manager utilisateur
+- un faux host abstrait "vm"
 
 ## NixOS et Darwin
 
@@ -27,6 +28,11 @@ Il ne contient jamais :
 - un host Darwin exposé via `darwinConfigurations.<name>`
 
 Le target Darwin reste une machine concrète, pas un faux target NixOS.
+
+Le même principe vaut pour les VMs :
+- un host VM reste un host concret dans `targets/hosts/`
+- le fait "tourne dans une VM" se modélise via `modules/profiles/virtual-machine.nix`
+- ce n'est pas un sous-dossier ou un type de host séparé
 
 ## Hosts actuels
 
@@ -44,8 +50,9 @@ Le target Darwin reste une machine concrète, pas un faux target NixOS.
 ### NixOS
 1. créer `targets/hosts/<name>/vars.nix`
 2. créer `targets/hosts/<name>/default.nix`
-3. ajouter `disko.nix` si le host doit être installable via NixOS Anywhere
-4. exposer la machine dans `flake.nix`
+3. importer `modules/profiles/virtual-machine.nix` si ce host concret est une VM
+4. ajouter `disko.nix` si le host doit être installable via NixOS Anywhere
+5. exposer la machine dans `flake.nix`
 
 ### Darwin
 1. créer `targets/hosts/<name>/vars.nix`

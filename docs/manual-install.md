@@ -6,6 +6,18 @@ Il couvre le cas où NixOS Anywhere n'est pas utilisé ou pas disponible.
 Référence rapide : `docs/install-checklist.md`
 Parcours NixOS Anywhere : `docs/nixos-anywhere.md`
 
+## Bare metal vs VM
+
+Le parcours manuel ne crée pas de branche d'architecture séparée pour les VMs :
+- le host reste concret dans `targets/hosts/`
+- le contexte VM se déclare via `modules/profiles/virtual-machine.nix`
+- le disque, le firmware et le réseau restent ceux du target concret
+
+Autrement dit :
+- la VM est un profil réutilisable
+- pas un host abstrait
+- pas un mode d'installation distinct
+
 ---
 
 ## Prérequis
@@ -170,10 +182,12 @@ cd /root/workstation
 
 **C'est le seul fichier à éditer.** Toutes les valeurs spécifiques à la machine sont centralisées dans `targets/hosts/<name>/vars.nix`.
 
+Le contexte `virtual-machine` n'est pas déclaré ici : il reste modélisé par les imports du host concret.
+
 ### Option A — Initialisation interactive
 
 ```bash
-nix run .#init-host -- main
+nix run .#init-host -- <host>
 ```
 
 Ce script pose les questions et génère `targets/hosts/<host>/vars.nix`.
@@ -202,10 +216,11 @@ nix run .#doctor -- --host <host>
 Puis :
 
 ```bash
-nix run .#validate-install -- main
+nix run .#validate-install -- <host>
 ```
 
 Ce script vérifie que `vars.nix` est complet, que tous les fichiers critiques existent, et qu'aucun placeholder ne subsiste dans les fichiers structurants.
+Il affiche aussi le contexte machine détecté (`bare-metal` ou `virtual-machine`).
 
 ---
 
@@ -338,11 +353,11 @@ nixos-rebuild switch --flake github:mikl-974/workstation#<host> \
 | Connexion Wi-Fi | `wpa_supplicant -B -i wlan0 -c <(wpa_passphrase SSID PASS)` |
 | SSH live | `systemctl start sshd && passwd root` |
 | Disques | `lsblk` |
-| Initialiser vars.nix | `nix run .#init-host -- main` |
+| Initialiser vars.nix | `nix run .#init-host -- <host>` |
 | Doctor | `nix run .#doctor -- --host <host>` |
 | Partitionnement disko | `nix run github:nix-community/disko -- --mode disko targets/hosts/<host>/disko.nix` |
 | Clone repo | `git clone https://github.com/mikl-974/workstation` |
-| Validation pré-install | `nix run .#validate-install -- main` |
+| Validation pré-install | `nix run .#validate-install -- <host>` |
 | Installation | `nixos-install --flake /root/workstation#<host> --root /mnt` |
 | Rebuild | `sudo nixos-rebuild switch --flake .#<host>` |
 | Post-install check | `nix run .#post-install-check -- --host <host>` |

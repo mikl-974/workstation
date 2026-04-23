@@ -106,6 +106,8 @@ cat > "$VARS_FILE" <<VARS_CONTENT
 #
 # Edit this file to configure this machine.
 # No other file needs to be modified for installation.
+# Bare metal vs VM is not declared here: that context stays modeled by the
+# concrete host imports (for example modules/profiles/virtual-machine.nix).
 #
 # After editing, validate before installing:
 #   nix run .#doctor -- --host $HOST

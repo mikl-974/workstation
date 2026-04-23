@@ -25,6 +25,7 @@ fi
 HOST="$1"
 HOST_DIR="$REPO_ROOT/targets/hosts/$HOST"
 VARS_FILE="$(host_vars_file "$REPO_ROOT" "$HOST")"
+MACHINE_CONTEXT="$(host_machine_context "$REPO_ROOT" "$HOST")"
 
 if [[ ! -d "$HOST_DIR" ]]; then
   echo -e "${RED}Erreur : targets/hosts/$HOST/ introuvable.${RST}"
@@ -72,6 +73,15 @@ show_field "hostname" "$HOSTNAME_VAL"
 [[ -f "$(host_disko_file "$REPO_ROOT" "$HOST")" ]] && show_field "disk" "$DISK"
 show_field "timezone" "$TIMEZONE"
 show_field "locale"   "$LOCALE"
+
+echo ""
+echo -e "${BLD}── Contexte machine${RST}"
+echo ""
+if [[ "$MACHINE_CONTEXT" == "virtual-machine" ]]; then
+  echo -e "  ${GRN}✔${RST}  virtual-machine — profil modules/profiles/virtual-machine.nix importé"
+else
+  echo -e "  ${GRN}✔${RST}  bare-metal — aucun profil VM détecté"
+fi
 
 echo ""
 echo -e "${BLD}── Fichiers du host${RST}"

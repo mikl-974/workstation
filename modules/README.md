@@ -26,7 +26,7 @@ Il ne contient jamais :
 | `modules/darwin/` | Base et intégrations Darwin (`nix-darwin`, `nix-homebrew`) |
 | `modules/desktop/` | Base système desktop (Hyprland, audio, connectivité) |
 | `modules/devshells/` | Environnements de développement CLI |
-| `modules/profiles/` | Assemblages réutilisables (composés dans les targets) |
+| `modules/profiles/` | Assemblages réutilisables (composés dans les targets, ex. `virtual-machine.nix`) |
 | `modules/roles/` | Composition d'apps + config système pour un usage |
 | `modules/security/` | Intégrations sécurité réutilisables (`sops-nix`) |
 | `modules/shell/` | Configuration shell système |

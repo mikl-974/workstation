@@ -4,6 +4,11 @@ Machines réelles gérées par ce repo.
 
 Chaque dossier contient la vérité d’une machine donnée.
 
+Une VM ne change pas cette règle :
+- on ne crée pas de host abstrait `vm`
+- on garde un host concret
+- on lui ajoute le profil `modules/profiles/virtual-machine.nix` si nécessaire
+
 ## Structure typique
 
 ### NixOS
@@ -11,8 +16,28 @@ Chaque dossier contient la vérité d’une machine donnée.
 - `default.nix` : entrée du host
 - `config/` : responsabilités machine lisibles quand le host le justifie
 - `disko.nix` : layout disque seulement si le host est réellement prévu pour NixOS Anywhere
+- `modules/profiles/virtual-machine.nix` : profil à importer si ce host concret est une VM
 
 ### Darwin
 - `vars.nix` : variables machine opératoires
 - `default.nix` : entrée du host
 - `config/` : responsabilités machine Darwin
+
+## Exemple concret
+
+Un host VM reste un host concret ; seul son import change :
+
+```nix
+{ hostVars, ... }:
+{
+  imports = [
+    ../../../../modules/profiles/desktop-hyprland.nix
+    ../../../../modules/profiles/virtual-machine.nix
+    ./user.nix
+  ];
+
+  networking.hostName = hostVars.hostname;
+}
+```
+
+À ce stade, le repo fournit le profil et l'UX associée, mais ne versionne pas encore de target VM concret prêt à l'emploi.

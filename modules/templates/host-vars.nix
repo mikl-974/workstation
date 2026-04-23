@@ -11,6 +11,10 @@
 # Ou utiliser le script d'initialisation :
 #   nix run .#init-host -- <name>
 {
+  # Contexte machine.
+  # Bare metal vs VM n'est pas déclaré ici : ce repo l'exprime via l'import
+  # éventuel de modules/profiles/virtual-machine.nix dans le host concret.
+
   # Plateforme NixOS.
   # Valeurs supportees : "x86_64-linux", "aarch64-linux"
   system = "x86_64-linux";

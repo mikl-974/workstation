@@ -71,6 +71,22 @@ host_has_profile() {
   [[ -d "$host_dir" ]] && grep -R -q "modules/profiles/${profile}.nix" "$host_dir"
 }
 
+host_is_virtual_machine() {
+  local repo_root="$1"
+  local host="$2"
+  host_has_profile "$repo_root" "$host" "virtual-machine"
+}
+
+host_machine_context() {
+  local repo_root="$1"
+  local host="$2"
+  if host_is_virtual_machine "$repo_root" "$host"; then
+    printf 'virtual-machine\n'
+  else
+    printf 'bare-metal\n'
+  fi
+}
+
 host_uses_disko() {
   local repo_root="$1"
   local host="$2"

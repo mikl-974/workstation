@@ -20,6 +20,22 @@ Sur la machine cible :
 - Boot depuis un live ISO NixOS (ou système existant avec SSH actif)
 - SSH accessible depuis la machine hôte
 
+## Bare metal vs VM
+
+Dans ce repo :
+- un target concret reste dans `targets/hosts/<name>/`
+- une VM se modélise par import de `modules/profiles/virtual-machine.nix`
+- NixOS Anywhere ne change pas de nature entre bare metal et VM
+
+Ce que le profil VM change :
+- il signale explicitement le contexte guest
+- il peut porter de petits defaults système raisonnables pour une VM
+
+Ce qu'il ne change pas :
+- le vrai `disk` reste à renseigner dans `vars.nix`
+- `disko.nix` reste attaché au host concret
+- le firmware, le réseau et l'hyperviseur restent des choix du target concret
+
 ## Préparer la configuration
 
 Les variables spécifiques à la machine sont centralisées dans `targets/hosts/<name>/vars.nix`.
@@ -38,6 +54,9 @@ Ce script interactif crée `targets/hosts/<host>/vars.nix` avec :
 - disk (device cible — lancer `lsblk` sur la machine pour l'identifier)
 - timezone
 - locale
+
+Le contexte `bare-metal` vs `virtual-machine` ne se déclare pas dans `vars.nix`.
+Il se déclare dans le host concret via l'import éventuel de `modules/profiles/virtual-machine.nix`.
 
 Ou éditer directement `targets/hosts/<host>/vars.nix` :
 
@@ -90,6 +109,11 @@ Ce script :
 4. récupère et affiche les empreintes SSH de la cible
 5. demande une confirmation explicite
 6. lance NixOS Anywhere
+
+Les scripts `doctor`, `show-config`, `validate-install` et `install-anywhere`
+affichent maintenant explicitement le contexte machine détecté :
+- `bare-metal`
+- ou `virtual-machine`
 
 ### Directement
 
@@ -166,3 +190,15 @@ Condition opératoire restante pour chacun :
 
 Host NixOS non prêt pour NixOS Anywhere à ce stade :
 - `ms-s1-max` (pas de `disko.nix`)
+
+Exemple d'usage sur un host VM concret :
+
+```nix
+{
+  imports = [
+    ../../../../modules/profiles/desktop-hyprland.nix
+    ../../../../modules/profiles/virtual-machine.nix
+    ./user.nix
+  ];
+}
+```

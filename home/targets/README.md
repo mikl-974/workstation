@@ -14,4 +14,5 @@ Un fichier de ce dossier dit explicitement :
 - `main.nix`
 - `laptop.nix`
 - `gaming.nix`
+- `openclaw-vm.nix`
 - `ms-s1-max.nix`

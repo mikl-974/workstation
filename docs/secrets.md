@@ -180,7 +180,7 @@ Les clés YAML d'un fichier `secrets/stacks/<stack>.yaml` doivent correspondre *
 
 ## Règles de chiffrement (`.sops.yaml`)
 
-Les `creation_rules` sont déclarées **par chemin** (`secrets/common`, `secrets/hosts/.*`, `secrets/stacks/.*`, `secrets/cloud/.*`). La clé canonique du projet est la recipient Age `mfo`. Une recipient supplémentaire `mfo_local` peut être déclarée pour les bootstraps locaux (par exemple OrbStack) ; dans ce cas il faut ensuite ré-aligner les fichiers chiffrés existants avec `sops updatekeys`.
+Les `creation_rules` sont déclarées **par chemin** (`secrets/common`, `secrets/hosts/.*`, `secrets/stacks/.*`, `secrets/cloud/.*`). La clé canonique du projet est la recipient Age `mfo`, utilisée partout de manière cohérente.
 
 ## Placeholders vs vrais secrets
 

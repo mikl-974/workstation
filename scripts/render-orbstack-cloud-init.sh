@@ -53,9 +53,8 @@ OUT="$REPO_ROOT/secrets/keys/orbstack-cloud-init.yaml"
 # Priority:
 #   1. --age-key <path> arg
 #   2. $SOPS_AGE_KEY_FILE
-#   3. ~/.config/sops/age/keys.txt        (sops default — usually the admin key)
-#   4. secrets/keys/age/key.txt           (local working key — only useful if it
-#                                          is also a recipient in .sops.yaml)
+#   3. ~/.config/sops/age/keys.txt
+#   4. secrets/keys/age/key.txt
 AGE_KEY="${AGE_KEY_OVERRIDE:-}"
 if [[ -z "$AGE_KEY" && -n "${SOPS_AGE_KEY_FILE:-}" ]]; then
   AGE_KEY="$SOPS_AGE_KEY_FILE"
@@ -74,20 +73,20 @@ fi
 log "Clé age embarquée : $AGE_KEY"
 
 # Sanity checks:
-#   1. the public key derived from $AGE_KEY must be declared in .sops.yaml
-#   2. the same recipient must already be present in existing encrypted files,
-#      otherwise the VM still won't be able to decrypt current secrets until
-#      `sops updatekeys` is run with the canonical `mfo` key available.
+#   1. the embedded key must match the canonical `mfo` recipient declared in
+#      .sops.yaml
+#   2. the same recipient must already be present in existing encrypted files
+#      consumed by the host
 PUB_FROM_KEY="$(grep -oE 'age1[0-9a-z]{58}' "$AGE_KEY" | head -1 || true)"
+MFO_RECIPIENT="$(grep -oE 'age1[0-9a-z]{58}' "$SOPS_YAML" | head -1 || true)"
 if [[ -n "$PUB_FROM_KEY" ]]; then
-  if ! grep -q "$PUB_FROM_KEY" "$SOPS_YAML"; then
-    warn "La clé publique $PUB_FROM_KEY n'est PAS un recipient déclaré dans .sops.yaml."
-    warn "La VM orbstack ne pourra PAS déchiffrer les secrets sops avec cette clé."
-    warn "Corrige en ajoutant cette clé dans .sops.yaml puis: sops updatekeys secrets/**/*.yaml"
-    warn "(ou utilise --age-key pour pointer vers la vraie clé mfo)"
-  else
-    ok "Clé publique trouvée dans .sops.yaml : $PUB_FROM_KEY"
+  if [[ -z "$MFO_RECIPIENT" ]]; then
+    die "recipient mfo introuvable dans .sops.yaml"
   fi
+  if [[ "$PUB_FROM_KEY" != "$MFO_RECIPIENT" ]]; then
+    die "la clé Age fournie correspond à $PUB_FROM_KEY, mais le projet attend la clé mfo $MFO_RECIPIENT"
+  fi
+  ok "Clé publique mfo confirmée : $PUB_FROM_KEY"
 
   missing_recipients=()
   while IFS= read -r secret_file; do
@@ -105,11 +104,9 @@ if [[ -n "$PUB_FROM_KEY" ]]; then
   )
 
   if (( ${#missing_recipients[@]} > 0 )); then
-    warn "Recipient absent de ${#missing_recipients[@]} fichier(s) chiffré(s) existant(s)."
-    warn "La VM orbstack ne pourra pas déchiffrer ces secrets tant que tu n'auras pas relancé:"
-    warn "  sops updatekeys secrets/common.yaml secrets/hosts/*.yaml secrets/stacks/*.yaml secrets/cloud/*.yaml"
+    die "recipient mfo absent de ${#missing_recipients[@]} fichier(s) chiffré(s) existant(s)"
   else
-    ok "Recipient déjà présent dans tous les fichiers chiffrés existants."
+    ok "Recipient mfo déjà présent dans tous les fichiers chiffrés existants."
   fi
 fi
 

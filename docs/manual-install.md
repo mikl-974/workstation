@@ -146,17 +146,12 @@ ssh mfo@orbstack@orb
 
 ### Pré-requis
 
-- une clé age privée (par défaut : `secrets/keys/age/key.txt` créée par
-  `nix run .#init-keys`). Si elle n'est PAS un recipient déclaré dans
-  `.sops.yaml`, le rendu affiche un warning et la VM ne pourra pas
-  déchiffrer les secrets sops. Solutions :
-  - utiliser la vraie clé `mfo` :
-    `nix run .#orbstack-cloud-init -- --age-key ~/.config/sops/age/keys.txt`
-  - **OU** ajouter la clé locale comme recipient supplémentaire dans
-    `.sops.yaml` puis ré-aligner les fichiers chiffrés existants :
-    ```bash
-    sops updatekeys secrets/common.yaml secrets/hosts/*.yaml secrets/stacks/*.yaml secrets/cloud/*.yaml
-    ```
+- la clé Age privée utilisée doit être **la vraie clé `mfo`**, celle qui
+  correspond au recipient déclaré dans `.sops.yaml` et déjà présent dans les
+  fichiers SOPS existants. Exemple :
+  `nix run .#orbstack-cloud-init -- --age-key ~/.config/sops/age/keys.txt`
+- `secrets/keys/age/key.txt` n'est utilisable que si tu y as explicitement mis
+  cette même clé `mfo`
 
 ### Idempotence
 

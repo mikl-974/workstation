@@ -293,6 +293,12 @@ else
   fail "scripts/post-install-check.sh manquant"
 fi
 
+if grep -RqsE 'key[[:space:]]*=[[:space:]]*"hosts\.[^"]+"' "$HOST_DIR"; then
+  fail "un chemin sops.secrets.*.key utilise une notation avec des points dans ce host (attendu : hosts/<host>/...)" 
+else
+  ok "syntaxe des clés sops compatible avec sops-install-secrets"
+fi
+
 if [[ "$HAS_DISKO" == true ]]; then
   if grep -q 'hostVars.disk' "$DISKO_FILE"; then
     ok "disko.nix lit bien le disque depuis hostVars.disk"

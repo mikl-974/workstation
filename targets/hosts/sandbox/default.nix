@@ -40,7 +40,7 @@
   };
 
   sops.secrets."sandbox/users/admin-password-hash" = {
-    key = "hosts.sandbox.users.admin.passwordHash";
+    key = "hosts/sandbox/users/admin/passwordHash";
     neededForUsers = true;
   };
 }

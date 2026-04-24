@@ -36,7 +36,7 @@
   };
 
   sops.secrets."openclaw-vm/users/openclaw-password-hash" = {
-    key = "hosts.openclaw-vm.users.openclaw.passwordHash";
+    key = "hosts/openclaw-vm/users/openclaw/passwordHash";
     neededForUsers = true;
   };
 

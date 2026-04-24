@@ -37,7 +37,7 @@
   };
 
   sops.secrets."contabo/users/admin-password-hash" = {
-    key = "hosts.contabo.users.admin.passwordHash";
+    key = "hosts/contabo/users/admin/passwordHash";
     neededForUsers = true;
   };
 

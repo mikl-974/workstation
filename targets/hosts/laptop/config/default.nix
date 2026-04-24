@@ -18,7 +18,7 @@
   };
 
   sops.secrets."laptop/users/mfo-password-hash" = {
-    key = "hosts.laptop.users.mfo.passwordHash";
+    key = "hosts/laptop/users/mfo/passwordHash";
     neededForUsers = true;
   };
 

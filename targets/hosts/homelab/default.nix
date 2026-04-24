@@ -43,7 +43,7 @@
   };
 
   sops.secrets."homelab/users/admin-password-hash" = {
-    key = "hosts.homelab.users.admin.passwordHash";
+    key = "hosts/homelab/users/admin/passwordHash";
     neededForUsers = true;
   };
 }

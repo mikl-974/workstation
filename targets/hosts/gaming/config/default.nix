@@ -18,7 +18,7 @@
   };
 
   sops.secrets."gaming/users/mfo-password-hash" = {
-    key = "hosts.gaming.users.mfo.passwordHash";
+    key = "hosts/gaming/users/mfo/passwordHash";
     neededForUsers = true;
   };
 

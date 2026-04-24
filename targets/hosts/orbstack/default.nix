@@ -36,7 +36,7 @@
   };
 
   sops.secrets."orbstack/users/mfo-password-hash" = {
-    key = "hosts.orbstack.users.mfo.passwordHash";
+    key = "hosts/orbstack/users/mfo/passwordHash";
     neededForUsers = true;
   };
 

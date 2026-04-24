@@ -44,8 +44,10 @@ Pour les détails, voir `docs/manual-install.md` ou `docs/nixos-anywhere.md`.
 
 ## Méthode choisie
 
-- [ ] **NixOS Anywhere** : machine cible accessible en SSH, disko.nix configuré → `docs/nixos-anywhere.md`
-- [ ] **Installation manuelle** : boot ISO NixOS, partitionnement manuel ou disko → `docs/manual-install.md`
+- [ ] **NixOS Anywhere** : `nix run .#install-anywhere -- <host> <ip-cible>` — voir `docs/nixos-anywhere.md`
+- [ ] **Manuelle live ISO** : `sudo nix run .#install-from-live -- <host>` — voir `docs/manual-install.md`
+- [ ] **Manuelle depuis NixOS existant** : `sudo nix run .#install-from-existing -- <host>` (autre disque que `/`) — voir `docs/manual-install.md`
+- [ ] **Auto-détection live vs existing** : `sudo nix run .#install-manual -- <host>`
 
 ---
 
@@ -58,15 +60,13 @@ Pour les détails, voir `docs/manual-install.md` ou `docs/nixos-anywhere.md`.
 - [ ] Installation terminée sans erreur
 - [ ] Machine redémarrée
 
-### Installation manuelle
+### Installation manuelle (live ou existing)
 
-- [ ] Boot ISO OK
-- [ ] Réseau opérationnel
-- [ ] Partitionnement effectué (disko ou manuel)
-- [ ] Partitions montées sous `/mnt`
-- [ ] Repo cloné
-- [ ] `nixos-install --flake .#<hostname> --root /mnt` exécuté
-- [ ] Machine redémarrée
+- [ ] Repo cloné sur la cible (live) ou présent (existing)
+- [ ] `sudo nix run .#install-from-live -- <host>` (ou `install-from-existing`) lancé
+- [ ] disko a formaté le disque cible
+- [ ] `nixos-install` a terminé sans erreur
+- [ ] Reboot effectué (ou disque retiré pour cas existing)
 
 ---
 

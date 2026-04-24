@@ -208,8 +208,10 @@ Le point d'entrée quotidien est `nix run .#<app>`. Toutes les apps sont défini
 - `nix run .#doctor` — diagnostic général de l'environnement
 
 ### Installation
-- `nix run .#install-anywhere -- <host>` — installation distante via NixOS Anywhere (`main`, `laptop`, `gaming`, `openclaw-vm`, `contabo`)
-- `nix run .#install-manual -- <host>` — guide d'installation manuelle (`ms-s1-max`)
+- `nix run .#install-anywhere -- <host>` — installation distante via NixOS Anywhere
+- `sudo nix run .#install-manual -- <host>` — installation manuelle (auto-détection live ISO vs NixOS existant)
+- `sudo nix run .#install-from-live -- <host>` — depuis un live ISO NixOS
+- `sudo nix run .#install-from-existing -- <host>` — depuis un NixOS existant, vers un autre disque (refuse de toucher au disque qui porte `/`)
 - `nix run .#post-install-check -- <host>` — vérifications post-installation
 
 ### Déploiement (Colmena, hosts server-class)

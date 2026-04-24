@@ -218,7 +218,9 @@
           validate-install   = mkApp [ pkgs.bash pkgs.nix ] "validate-install.sh";
           doctor             = mkApp [ pkgs.bash pkgs.nix ] "doctor.sh";
           install-anywhere   = mkApp [ pkgs.bash pkgs.nix pkgs.openssh ] "install-anywhere.sh";
-          install-manual     = mkApp [ pkgs.bash ] "install-manual.sh";
+          install-manual         = mkApp [ pkgs.bash pkgs.nix ] "install-manual.sh";
+          install-from-live      = mkApp [ pkgs.bash pkgs.nix pkgs.util-linux pkgs.rsync ] "install-from-live.sh";
+          install-from-existing  = mkApp [ pkgs.bash pkgs.nix pkgs.util-linux pkgs.rsync ] "install-from-existing.sh";
           post-install-check = mkApp [ pkgs.bash pkgs.nix pkgs.openssh ] "post-install-check.sh";
           validate-inventory = mkApp [ pkgs.bash pkgs.nix ] "validate-inventory.sh";
           deploy-contabo     = mkApp [ pkgs.bash pkgs.colmena ] "deploy-contabo.sh";

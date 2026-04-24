@@ -1,363 +1,77 @@
-# Installation manuelle NixOS — Guide complet
+# Installation manuelle
 
-Ce document décrit le parcours d'installation manuelle de la workstation à partir d'un live ISO NixOS.
-Il couvre le cas où NixOS Anywhere n'est pas utilisé ou pas disponible.
+Quand NixOS Anywhere n'est pas utilisable (pas de SSH sur la cible, machine
+physique sans réseau préinstallé, réinstall en local, etc.), deux flux
+manuels existent — l'un et l'autre exécutent **exactement** la même séquence
+`disko → nixos-install --flake`.
 
-Référence rapide : `docs/install-checklist.md`
-Parcours NixOS Anywhere : `docs/nixos-anywhere.md`
+| Contexte | App Nix | Script | Garde-fou disque |
+|---|---|---|---|
+| Live ISO NixOS bootée sur la machine cible | `nix run .#install-from-live -- <host>` | `scripts/install-from-live.sh` | aucun (le live ISO ne touche pas au disque) |
+| NixOS déjà installé, on installe sur **un autre disque** | `sudo nix run .#install-from-existing -- <host>` | `scripts/install-from-existing.sh` | refuse si le disque cible porte `/` |
+| Auto-détection (live vs existing) | `nix run .#install-manual -- <host>` | `scripts/install-manual.sh` | délègue au bon script |
 
-## Bare metal vs VM
-
-Le parcours manuel ne crée pas de branche d'architecture séparée pour les VMs :
-- le host reste concret dans `targets/hosts/`
-- le contexte VM se déclare via `modules/profiles/virtual-machine.nix`
-- le disque, le firmware et le réseau restent ceux du target concret
-
-Autrement dit :
-- la VM est un profil réutilisable
-- pas un host abstrait
-- pas un mode d'installation distinct
+Toutes les apps lisent `targets/hosts/<host>/{vars,disko}.nix` et exigent que
+`validate-install` passe avant toute action destructive.
 
 ---
 
-## Prérequis
+## Flux nominal — depuis un live ISO NixOS
 
-- ISO NixOS minimal téléchargée (https://nixos.org/download/)
-- Clé USB bootable préparée
-- Connexion réseau disponible sur la machine cible
-- Accès au repo `workstation` (clone local ou accès GitHub)
+3 commandes, dans cet ordre :
+
+```bash
+nix-shell -p git nix
+git clone https://github.com/mikl-974/infra /tmp/infra && cd /tmp/infra
+sudo nix --extra-experimental-features 'nix-command flakes' \
+  run .#install-from-live -- <host>
+```
+
+Le script enchaîne :
+
+1. `validate-install` (échec → arrêt avant action destructive)
+2. confirmation interactive (disque cible affiché)
+3. `disko --mode disko targets/hosts/<host>/disko.nix` (formate + monte sous `/mnt`)
+4. copie du repo dans `/mnt/etc/infra` (utile au premier boot)
+5. `nixos-install --no-root-passwd --flake .#<host> --root /mnt`
+   — les mots de passe utilisateurs viennent de sops, pas besoin de prompt
+6. confirmation reboot
+
+## Flux nominal — depuis un NixOS déjà installé
+
+```bash
+sudo nix run .#install-from-existing -- <host>
+```
+
+Différence avec live : refuse explicitement si `vars.nix:disk` correspond au
+disque qui porte `/` sur la machine courante. Conçu pour réinstaller un
+disque secondaire ou monté en passthrough sans clé USB.
 
 ---
 
-## 1. Boot sur l'ISO NixOS
+## Pré-requis (les deux flux)
 
-1. Écrire l'ISO sur la clé USB :
-
-   ```bash
-   dd if=nixos-minimal.iso of=/dev/sdX bs=4M status=progress conv=fsync
-   ```
-
-2. Booter la machine cible sur la clé USB (configurer le BIOS/UEFI en conséquence).
-
-3. Vérifier que le système a démarré :
-
-   ```bash
-   uname -a
-   ```
+- `targets/hosts/<host>/vars.nix` complet (champ `disk` correctement renseigné — vérifier `lsblk`)
+- `targets/hosts/<host>/disko.nix` présent
+- `targets/hosts/<host>/default.nix` exposé via `nixosConfigurations` dans `flake.nix`
+- `nix run .#validate-install -- <host>` passe sans erreur
 
 ---
 
-## 2. Préparation réseau
+## En cas d'échec
 
-**Connexion filaire** : dans la plupart des cas, automatique via DHCP.
-
-**Connexion Wi-Fi** :
-
-```bash
-wpa_supplicant -B -i wlan0 -c <(wpa_passphrase "NOM_RESEAU" "MOT_DE_PASSE")
-dhclient wlan0
-```
-
-Vérifier la connectivité :
-
-```bash
-ping -c 3 github.com
-```
-
-**Activer SSH pour accès distant (optionnel mais recommandé)** :
-
-```bash
-passwd root            # définir un mot de passe temporaire
-systemctl start sshd
-ip a                   # noter l'IP de la machine cible
-```
-
-Depuis la machine hôte : `ssh root@<IP-CIBLE>`
-
----
-
-## 3. Partitionnement et formatage
-
-### Option A — Utiliser disko (recommandé si `disko.nix` est disponible)
-
-Les hosts `main`, `laptop` et `gaming` disposent d'un `targets/hosts/<host>/disko.nix` qui déclare le layout disque complet.
-Le disque cible est lu depuis `targets/hosts/<host>/vars.nix` (champ `disk`).
-
-- Partition EFI 512 MiB
-- Partition btrfs couvrant le reste, avec subvolumes :
-  - `@` → `/`
-  - `@home` → `/home`
-  - `@nix` → `/nix`
-  - `@var-log` → `/var/log`
-
-**S'assurer que `vars.nix` est configuré avant de lancer disko** (voir étape 6 ci-dessous).
-
-Lancer disko :
-
-```bash
-nix run github:nix-community/disko -- --mode disko targets/hosts/<host>/disko.nix
-```
-
-disko partitionne, formate et monte automatiquement.
-
-### Option B — Partitionnement manuel
-
-Identifier le disque cible :
-
-```bash
-lsblk
-```
-
-Créer la table de partitions GPT :
-
-```bash
-gdisk /dev/nvme0n1
-# Dans gdisk :
-#   o        → nouvelle table GPT
-#   n        → partition 1 : début=défaut, fin=+512M, type=EF00 (EFI)
-#   n        → partition 2 : début=défaut, fin=défaut, type=8300 (Linux)
-#   w        → écrire et quitter
-```
-
-Formater les partitions :
-
-```bash
-mkfs.vfat -F32 /dev/nvme0n1p1
-mkfs.btrfs -f /dev/nvme0n1p2
-```
-
-Créer les subvolumes btrfs :
-
-```bash
-mount /dev/nvme0n1p2 /mnt
-btrfs subvolume create /mnt/@
-btrfs subvolume create /mnt/@home
-btrfs subvolume create /mnt/@nix
-btrfs subvolume create /mnt/@var-log
-umount /mnt
-```
-
----
-
-## 4. Montage des partitions
-
-```bash
-DISK=/dev/nvme0n1
-
-# Subvolume racine
-mount -o subvol=@,compress=zstd,noatime "${DISK}p2" /mnt
-
-# Créer les points de montage
-mkdir -p /mnt/{boot,home,nix,var/log}
-
-# EFI
-mount "${DISK}p1" /mnt/boot
-
-# Subvolumes
-mount -o subvol=@home,compress=zstd,noatime    "${DISK}p2" /mnt/home
-mount -o subvol=@nix,compress=zstd,noatime     "${DISK}p2" /mnt/nix
-mount -o subvol=@var-log,compress=zstd,noatime "${DISK}p2" /mnt/var/log
-```
-
-Vérifier :
-
-```bash
-lsblk
-df -h /mnt
-```
-
----
-
-## 5. Clone du repo workstation
-
-```bash
-nix-shell -p git
-git clone https://github.com/mikl-974/workstation /root/workstation
-cd /root/workstation
-```
-
----
-
-## 6. Préparer la configuration machine
-
-**C'est le seul fichier à éditer.** Toutes les valeurs spécifiques à la machine sont centralisées dans `targets/hosts/<name>/vars.nix`.
-
-Le contexte `virtual-machine` n'est pas déclaré ici : il reste modélisé par les imports du host concret.
-
-### Option A — Initialisation interactive
-
-```bash
-nix run .#init-host -- <host>
-```
-
-Ce script pose les questions et génère `targets/hosts/<host>/vars.nix`.
-
-### Option B — Édition directe
-
-Ouvrir `targets/hosts/<host>/vars.nix` et renseigner les valeurs :
-
-```nix
-{
-  system   = "x86_64-linux";   # plateforme NixOS du host
-  username = "mikl";           # nom d'utilisateur système
-  hostname = "<host>";         # doit correspondre à la clé nixosConfigurations
-  disk     = "/dev/nvme0n1";   # vérifier avec lsblk sur la machine cible
-  timezone = "Europe/Paris";
-  locale   = "fr_FR.UTF-8";
-}
-```
-
-### Valider la configuration
-
-```bash
-nix run .#doctor -- --host <host>
-```
-
-Puis :
-
-```bash
-nix run .#validate-install -- <host>
-```
-
-Ce script vérifie que `vars.nix` est complet, que tous les fichiers critiques existent, et qu'aucun placeholder ne subsiste dans les fichiers structurants.
-Il affiche aussi le contexte machine détecté (`bare-metal` ou `virtual-machine`).
-
----
-
-## 7. Installation NixOS
-
-Depuis le répertoire du repo cloné :
-
-```bash
-nixos-install --flake /root/workstation#<host> --root /mnt
-```
-
-Si la configuration hardware est nécessaire, la générer d'abord :
-
-```bash
-nixos-generate-config --root /mnt
-# Vérifier /mnt/etc/nixos/hardware-configuration.nix
-# L'intégrer dans targets/hosts/<host>/default.nix si des détecteurs matériels sont nécessaires
-```
-
----
-
-## 8. Reboot
-
-```bash
-umount -R /mnt
-reboot
-```
-
-Retirer la clé USB avant le redémarrage.
-
----
-
-## 9. Premier boot et activation de Home Manager
-
-Au premier boot, NixOS est opérationnel. Home Manager est intégré dans le système via `home-manager.nixosModules.home-manager` — il s'applique automatiquement lors de `nixos-rebuild switch`.
-
-Se connecter avec l'utilisateur défini dans `vars.nix`, puis vérifier :
-
-```bash
-# Vérifier que le système est bien le bon
-nixos-rebuild list-generations
-
-# Rebuilder si nécessaire
-sudo nixos-rebuild switch --flake /root/workstation#<host>
-
-# Vérifier l'état général
-nix run .#post-install-check -- --host <host>
-```
-
----
-
-## 10. Dotfiles
-
-Les dotfiles sont gérés par Home Manager via la composition Home Manager active (`home/targets/<host>.nix`).
-
-Pour activer un dotfile :
-
-1. Placer le fichier dans `dotfiles/<app>/`
-2. L'enregistrer dans la composition Home Manager active (`home/targets/<host>.nix`) :
-
-   ```nix
-   home.file.".config/hypr/hyprland.conf".source = ../dotfiles/hyprland/hyprland.conf;
-   ```
-
-3. Rebuilder :
-
-   ```bash
-   sudo nixos-rebuild switch --flake .#<host>
-   ```
-
-Les symlinks sont créés dans `~/.config/` automatiquement.
-
-Voir aussi `docs/first-boot.md` pour les vérifications concrètes de premier login.
-
----
-
-## 11. Vérifications post-installation
-
-Lancer le script de vérification post-install :
-
-```bash
-nix run .#post-install-check -- --host <host>
-```
-
-Ou manuellement :
-
-```bash
-# Hyprland disponible
-which Hyprland
-
-# Services réseau
-systemctl status tailscaled
-systemctl status warp-svc
-
-# Audio
-systemctl status pipewire
-systemctl --user status pipewire
-
-# Dotfiles Home Manager
-ls -la ~/.config/hypr/
-ls -la ~/.config/foot/
-
-# DevShell .NET
-nix develop .#dotnet --command dotnet --version
-```
-
----
-
-## 12. Rebuilder après modification du repo
-
-```bash
-# Local
-sudo nixos-rebuild switch --flake .#<host>
-
-# Depuis n'importe où (avec le flake GitHub)
-sudo nixos-rebuild switch --flake github:mikl-974/workstation#<host>
-
-# À distance
-nixos-rebuild switch --flake github:mikl-974/workstation#<host> \
-  --target-host mikl@<IP-MACHINE> --use-remote-sudo
-```
-
----
-
-## Récapitulatif des commandes clés
-
-| Étape | Commande |
+| Symptôme | Diagnostic |
 |---|---|
-| Clé USB | `dd if=nixos-minimal.iso of=/dev/sdX bs=4M status=progress` |
-| Connexion Wi-Fi | `wpa_supplicant -B -i wlan0 -c <(wpa_passphrase SSID PASS)` |
-| SSH live | `systemctl start sshd && passwd root` |
-| Disques | `lsblk` |
-| Initialiser vars.nix | `nix run .#init-host -- <host>` |
-| Doctor | `nix run .#doctor -- --host <host>` |
-| Partitionnement disko | `nix run github:nix-community/disko -- --mode disko targets/hosts/<host>/disko.nix` |
-| Clone repo | `git clone https://github.com/mikl-974/workstation` |
-| Validation pré-install | `nix run .#validate-install -- <host>` |
-| Installation | `nixos-install --flake /root/workstation#<host> --root /mnt` |
-| Rebuild | `sudo nixos-rebuild switch --flake .#<host>` |
-| Post-install check | `nix run .#post-install-check -- --host <host>` |
+| `validate-install a échoué` | placeholders restants ou fichiers absents — relancer `nix run .#doctor -- --host <host>` |
+| disko refuse de formater | partition montée — `umount -R /mnt` puis recommencer |
+| `nixos-install` casse en plein milieu | relancer le script : disko est idempotent, `nixos-install` reprend là où il en était |
+| Pas de réseau sur le live ISO | `wpa_supplicant -B -i wlan0 -c <(wpa_passphrase SSID PASS) && dhclient wlan0` |
+| Détection auto se trompe | forcer avec `--method live` ou `--method existing` |
+
+---
+
+## Référence détaillée (partitionnement manuel sans disko, etc.)
+
+Voir [`docs/manual-install-reference.md`](manual-install-reference.md).
+Cette référence couvre le partitionnement à la main, les options btrfs, les
+cas où `disko.nix` n'est pas dispo, et le débogage profond.

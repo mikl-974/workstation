@@ -104,11 +104,12 @@ Le système est installé et la machine redémarre.
 ### 3b. Installer manuellement
 
 ```bash
-nix run .#install-manual -- --host <host>
+sudo nix run .#install-manual -- <host>
+# (auto-détection live ISO vs NixOS existant — force avec --method si besoin)
 ```
 
-Ce guide interactif accompagne le parcours manuel étape par étape.
-Voir `docs/manual-install.md` pour la procédure complète.
+Voir `docs/manual-install.md` pour le détail des deux flux (`install-from-live`,
+`install-from-existing`).
 
 ### 4. Dotfiles — comment ils sont appliqués
 

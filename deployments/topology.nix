@@ -70,6 +70,13 @@
       region  = "home-lan";
     };
 
+    orbstack = {
+      kind    = "nixosHost";
+      runtime = "nixos-systemd";
+      address = "orbstack";
+      region  = "home-lan";
+    };
+
     contabo = {
       kind    = "nixosHost";
       runtime = "dokploy";

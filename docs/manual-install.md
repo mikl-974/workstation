@@ -1,77 +1,117 @@
 # Installation manuelle
 
-Quand NixOS Anywhere n'est pas utilisable (pas de SSH sur la cible, machine
-physique sans réseau préinstallé, réinstall en local, etc.), deux flux
-manuels existent — l'un et l'autre exécutent **exactement** la même séquence
-`disko → nixos-install --flake`.
+Quand NixOS Anywhere n'est pas utilisable (pas de SSH, pas de kexec, hyperviseur
+non compatible, etc.), trois flux existent. **Choisir le bon flux dépend
+uniquement de l'état du disque cible**, pas de la procédure mentale d'install.
 
-| Contexte | App Nix | Script | Garde-fou disque |
+## Quel flux pour quel cas ?
+
+| Cas | État du disque cible | Tu veux | Commande |
 |---|---|---|---|
-| Live ISO NixOS bootée sur la machine cible | `nix run .#install-from-live -- <host>` | `scripts/install-from-live.sh` | aucun (le live ISO ne touche pas au disque) |
-| NixOS déjà installé, on installe sur **un autre disque** | `sudo nix run .#install-from-existing -- <host>` | `scripts/install-from-existing.sh` | refuse si le disque cible porte `/` |
-| Auto-détection (live vs existing) | `nix run .#install-manual -- <host>` | `scripts/install-manual.sh` | délègue au bon script |
+| **A. Reconfigurer** | NixOS déjà installé et bootable, tu gardes le layout | appliquer ta config par-dessus, sans toucher au disque | `sudo nix run .#reconfigure -- <host>` |
+| **B. Installer sur un autre disque** | Disque cible ≠ disque qui porte `/` sur le système courant | partitionner et installer un nouveau système sur ce disque | `sudo nix run .#install-from-existing -- <host>` |
+| **C. Réinstaller sur le disque qui porte `/`** | Le disque cible est en cours d'utilisation | wipe complet + réinstall | impossible en place — booter sur un live ISO et lancer `install-from-live`, ou utiliser NixOS Anywhere via kexec |
 
-Toutes les apps lisent `targets/hosts/<host>/{vars,disko}.nix` et exigent que
-`validate-install` passe avant toute action destructive.
+Cas typiques :
+
+- **OrbStack, hyperviseur (UTM, VMware, Proxmox), VPS qui livre déjà un NixOS** → cas A : `reconfigure`.
+- **Réinstall propre d'un disque secondaire ou en passthrough** → cas B : `install-from-existing`.
+- **Wipe + install neuve sur la machine courante** → cas C : live ISO USB ou `install-anywhere localhost` via kexec.
+
+Tous les flux exécutent `validate-install` avant toute action, et tous les flux
+destructifs (B et C) appliquent **exactement** la même séquence
+`disko → nixos-install --flake`. Le résultat système est identique entre
+A, B et C dès qu'on parle uniquement de la configuration logicielle.
 
 ---
 
-## Flux nominal — depuis un live ISO NixOS
-
-3 commandes, dans cet ordre :
+## A. Reconfigurer (le plus fréquent)
 
 ```bash
-nix-shell -p git nix
-git clone https://github.com/mikl-974/infra /tmp/infra && cd /tmp/infra
-sudo nix --extra-experimental-features 'nix-command flakes' \
-  run .#install-from-live -- <host>
+# 1. Récupérer le repo (premier setup uniquement)
+nix-shell -p git
+git clone https://github.com/mikl-974/infra /etc/infra
+cd /etc/infra
+
+# 2. Appliquer la config
+sudo nix run .#reconfigure -- <host>
+# équivaut à :
+#   nix run .#validate-install -- <host>
+#   sudo nixos-rebuild switch --flake .#<host>
 ```
 
-Le script enchaîne :
+Modes alternatifs : `--mode test` (apply sans changer le boot par défaut),
+`--mode boot` (stage pour le prochain reboot), `--mode dry-activate` (no-op
+descriptif).
 
-1. `validate-install` (échec → arrêt avant action destructive)
-2. confirmation interactive (disque cible affiché)
-3. `disko --mode disko targets/hosts/<host>/disko.nix` (formate + monte sous `/mnt`)
-4. copie du repo dans `/mnt/etc/infra` (utile au premier boot)
-5. `nixos-install --no-root-passwd --flake .#<host> --root /mnt`
-   — les mots de passe utilisateurs viennent de sops, pas besoin de prompt
-6. confirmation reboot
+**Identique à une install neuve ?** Côté config Nix : oui, à 100%.
+Différences inévitables :
 
-## Flux nominal — depuis un NixOS déjà installé
+- layout disque : celui de l'installeur d'origine, pas celui de `disko.nix`
+- `system.stateVersion` : celle d'origine si différente — laisse-la, ne la force pas
+- état héritée (`/var`, `/home`, …) : préservée
+
+Pour un usage VM dev (OrbStack), ces différences n'ont aucun impact pratique.
+
+## B. Installer sur un autre disque depuis un NixOS existant
 
 ```bash
 sudo nix run .#install-from-existing -- <host>
 ```
 
-Différence avec live : refuse explicitement si `vars.nix:disk` correspond au
-disque qui porte `/` sur la machine courante. Conçu pour réinstaller un
-disque secondaire ou monté en passthrough sans clé USB.
+Garde-fou : refuse si `vars.nix:disk` correspond au disque qui porte `/`.
+
+## C. Réinstaller le disque courant
+
+Pas possible en place. Trois options :
+
+```bash
+# C.1 — Live ISO NixOS, depuis la machine cible bootée sur USB
+sudo nix run .#install-from-live -- <host>
+
+# C.2 — NixOS Anywhere en localhost via kexec (le plus simple si pas de USB)
+nix run .#install-anywhere -- <host> 127.0.0.1
+# (la cible doit avoir un sshd actif accessible en root, et nixos-anywhere
+#  installe son installeur via kexec ; au reboot, le système est neuf)
+
+# C.3 — NixOS Anywhere depuis une autre machine
+nix run .#install-anywhere -- <host> <ip-cible>
+```
 
 ---
 
-## Pré-requis (les deux flux)
+## Récapitulatif des apps
 
-- `targets/hosts/<host>/vars.nix` complet (champ `disk` correctement renseigné — vérifier `lsblk`)
-- `targets/hosts/<host>/disko.nix` présent
+| App | Action | Destructif |
+|---|---|---|
+| `nix run .#reconfigure -- <host>` | applique la config sur le système courant | non |
+| `sudo nix run .#install-from-live -- <host>` | install neuve depuis live ISO | oui (disque cible) |
+| `sudo nix run .#install-from-existing -- <host>` | install neuve depuis NixOS existant, autre disque | oui (disque cible, refuse `/`) |
+| `nix run .#install-manual -- <host>` | dispatcher live↔existing | oui |
+| `nix run .#install-anywhere -- <host> <ip>` | install à distance via SSH+kexec | oui |
+
+---
+
+## Pré-requis communs
+
+- `targets/hosts/<host>/vars.nix` complet (et pour B/C : `disk` correct, vérifier `lsblk`)
 - `targets/hosts/<host>/default.nix` exposé via `nixosConfigurations` dans `flake.nix`
+- pour B/C : `targets/hosts/<host>/disko.nix` présent
 - `nix run .#validate-install -- <host>` passe sans erreur
-
----
 
 ## En cas d'échec
 
 | Symptôme | Diagnostic |
 |---|---|
-| `validate-install a échoué` | placeholders restants ou fichiers absents — relancer `nix run .#doctor -- --host <host>` |
+| `validate-install a échoué` | placeholders restants — `nix run .#doctor -- --host <host>` |
 | disko refuse de formater | partition montée — `umount -R /mnt` puis recommencer |
-| `nixos-install` casse en plein milieu | relancer le script : disko est idempotent, `nixos-install` reprend là où il en était |
+| `nixos-install` casse en plein milieu | relancer le script : disko est idempotent |
+| `nixos-rebuild` se plaint d'un `fileSystems` manquant | la config référence un point de montage que la VM n'a pas — soit ajuster le host, soit créer le point de montage |
 | Pas de réseau sur le live ISO | `wpa_supplicant -B -i wlan0 -c <(wpa_passphrase SSID PASS) && dhclient wlan0` |
-| Détection auto se trompe | forcer avec `--method live` ou `--method existing` |
+| Détection auto du dispatcher se trompe | forcer avec `--method live` ou `--method existing` |
 
 ---
 
 ## Référence détaillée (partitionnement manuel sans disko, etc.)
 
 Voir [`docs/manual-install-reference.md`](manual-install-reference.md).
-Cette référence couvre le partitionnement à la main, les options btrfs, les
-cas où `disko.nix` n'est pas dispo, et le débogage profond.

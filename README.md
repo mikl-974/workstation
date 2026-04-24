@@ -212,6 +212,7 @@ Le point d'entrée quotidien est `nix run .#<app>`. Toutes les apps sont défini
 - `sudo nix run .#install-manual -- <host>` — installation manuelle (auto-détection live ISO vs NixOS existant)
 - `sudo nix run .#install-from-live -- <host>` — depuis un live ISO NixOS
 - `sudo nix run .#install-from-existing -- <host>` — depuis un NixOS existant, vers un autre disque (refuse de toucher au disque qui porte `/`)
+- `sudo nix run .#reconfigure -- <host>` — applique la config sur le NixOS courant (pas d'install, pas de wipe — utile pour OrbStack et VMs préprovisionnées)
 - `nix run .#post-install-check -- <host>` — vérifications post-installation
 
 ### Déploiement (Colmena, hosts server-class)

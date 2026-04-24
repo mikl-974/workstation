@@ -43,6 +43,7 @@ in
 
     homelab = [ ];
     sandbox = [ ];
+    orbstack = [ ];
 
     azure-ext = [
       { stack = "uptime-kuma"; instance = "uptime-kuma-public"; }

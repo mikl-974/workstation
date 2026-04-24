@@ -166,6 +166,13 @@
           vars   = import ./targets/hosts/sandbox/vars.nix;
           modules = [ disko.nixosModules.disko ./targets/hosts/sandbox/default.nix ./targets/hosts/sandbox/disko.nix ];
         };
+
+        # OrbStack VM — no disko (OrbStack provides the disk layout).
+        # Brought up with: sudo nixos-rebuild switch --flake .#orbstack
+        orbstack = mkHost {
+          vars   = import ./targets/hosts/orbstack/vars.nix;
+          modules = [ ./targets/hosts/orbstack/default.nix ];
+        };
       };
 
       darwinConfigurations = {
@@ -221,6 +228,7 @@
           install-manual         = mkApp [ pkgs.bash pkgs.nix ] "install-manual.sh";
           install-from-live      = mkApp [ pkgs.bash pkgs.nix pkgs.util-linux pkgs.rsync ] "install-from-live.sh";
           install-from-existing  = mkApp [ pkgs.bash pkgs.nix pkgs.util-linux pkgs.rsync ] "install-from-existing.sh";
+          reconfigure            = mkApp [ pkgs.bash pkgs.nix ] "reconfigure.sh";
           post-install-check = mkApp [ pkgs.bash pkgs.nix pkgs.openssh ] "post-install-check.sh";
           validate-inventory = mkApp [ pkgs.bash pkgs.nix ] "validate-inventory.sh";
           deploy-contabo     = mkApp [ pkgs.bash pkgs.colmena ] "deploy-contabo.sh";

@@ -51,8 +51,19 @@ if [[ -z "$METHOD" ]]; then
   log "Méthode auto-détectée : $METHOD"
 fi
 
+dispatch_app() {
+  local app_name="$1"
+  local local_script="$2"
+
+  if [[ "$_SCRIPT_DIR" == /nix/store/* ]]; then
+    exec nix --extra-experimental-features 'nix-command flakes' run "${REPO_ROOT}#${app_name}" -- "$HOST"
+  fi
+
+  exec bash "$_SCRIPT_DIR/$local_script" "$HOST"
+}
+
 case "$METHOD" in
-  live)     exec bash "$_SCRIPT_DIR/install-from-live.sh"     "$HOST" ;;
-  existing) exec bash "$_SCRIPT_DIR/install-from-existing.sh" "$HOST" ;;
+  live)     dispatch_app "install-from-live" "install-from-live.sh" ;;
+  existing) dispatch_app "install-from-existing" "install-from-existing.sh" ;;
   *)        die "Méthode inconnue : $METHOD (attendu: live | existing)" ;;
 esac

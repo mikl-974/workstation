@@ -226,8 +226,8 @@
           doctor             = mkApp [ pkgs.bash pkgs.nix ] "doctor.sh";
           install-anywhere   = mkApp [ pkgs.bash pkgs.nix pkgs.openssh ] "install-anywhere.sh";
           install-manual         = mkApp [ pkgs.bash pkgs.nix ] "install-manual.sh";
-          install-from-live      = mkApp [ pkgs.bash pkgs.nix pkgs.util-linux pkgs.rsync ] "install-from-live.sh";
-          install-from-existing  = mkApp [ pkgs.bash pkgs.nix pkgs.util-linux pkgs.rsync ] "install-from-existing.sh";
+          install-from-live      = mkApp [ pkgs.bash pkgs.git pkgs.nix pkgs.util-linux pkgs.rsync ] "install-from-live.sh";
+          install-from-existing  = mkApp [ pkgs.bash pkgs.git pkgs.nix pkgs.util-linux pkgs.rsync ] "install-from-existing.sh";
           reconfigure            = mkApp [ pkgs.bash pkgs.nix ] "reconfigure.sh";
           orbstack-cloud-init    = mkApp [ pkgs.bash pkgs.gawk pkgs.gnused pkgs.coreutils ] "render-orbstack-cloud-init.sh";
           post-install-check = mkApp [ pkgs.bash pkgs.nix pkgs.openssh ] "post-install-check.sh";

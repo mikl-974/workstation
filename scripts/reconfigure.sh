@@ -22,6 +22,24 @@ REPO_ROOT="$(resolve_repo_root "$_SCRIPT_DIR")"
 
 HOST=""
 MODE="switch"
+
+run_rebuild() {
+  local extra_args=("$@")
+  local log_file
+  local status
+
+  log_file="$(mktemp)"
+  set +e
+  (
+    cd "$REPO_ROOT" && sudo nixos-rebuild "$MODE" --flake ".#$HOST" "${extra_args[@]}"
+  ) 2>&1 | tee "$log_file"
+  status=${PIPESTATUS[0]}
+  set -e
+
+  REBUILD_LAST_LOG="$log_file"
+  return "$status"
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --mode) MODE="$2"; shift 2 ;;
@@ -53,7 +71,18 @@ bash "$REPO_ROOT/scripts/validate-install.sh" "$HOST" \
 step "2/3 — nixos-rebuild $MODE --flake .#$HOST"
 log "  Repo : $REPO_ROOT"
 log ""
-( cd "$REPO_ROOT" && sudo nixos-rebuild "$MODE" --flake ".#$HOST" )
+
+REBUILD_LAST_LOG=""
+if ! run_rebuild; then
+  if [[ -n "$REBUILD_LAST_LOG" ]] && grep -q "unable to load seccomp BPF program" "$REBUILD_LAST_LOG"; then
+    warn "Le sandbox Nix du host courant ne supporte pas ce filtre seccomp — nouvelle tentative avec filter-syscalls=false"
+    log ""
+    run_rebuild --option filter-syscalls false \
+      || die "nixos-rebuild a échoué même après désactivation de filter-syscalls."
+  else
+    die "nixos-rebuild a échoué."
+  fi
+fi
 
 step "3/3 — Terminé"
 ok "Configuration '$HOST' appliquée (mode: $MODE)"

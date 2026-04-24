@@ -22,6 +22,11 @@ REPO_ROOT="$(resolve_repo_root "$_SCRIPT_DIR")"
 
 HOST=""
 MODE="switch"
+REQUESTED_MODE="$MODE"
+EFFECTIVE_MODE="$MODE"
+REBUILD_EXTRA_ARGS=()
+BOOTLOADER_FALLBACK=0
+BOOTLOADER_MOUNTPOINT="/boot"
 
 run_rebuild() {
   local extra_args=("$@")
@@ -38,6 +43,34 @@ run_rebuild() {
 
   REBUILD_LAST_LOG="$log_file"
   return "$status"
+}
+
+rebuild_hit_seccomp_filter_error() {
+  [[ -n "$REBUILD_LAST_LOG" ]] && grep -q "unable to load seccomp BPF program" "$REBUILD_LAST_LOG"
+}
+
+rebuild_hit_unmounted_boot_error() {
+  [[ -n "$REBUILD_LAST_LOG" ]] \
+    && grep -Eq "efiSysMountPoint = '.*' is not a mounted partition" "$REBUILD_LAST_LOG"
+}
+
+capture_bootloader_mountpoint() {
+  local mountpoint
+
+  mountpoint="$(
+    sed -n "s/.*efiSysMountPoint = '\\([^']*\\)' is not a mounted partition.*/\\1/p" "$REBUILD_LAST_LOG" \
+      | tail -n 1
+  )"
+  if [[ -n "$mountpoint" ]]; then
+    BOOTLOADER_MOUNTPOINT="$mountpoint"
+  fi
+}
+
+print_bootloader_resolution_commands() {
+  log "  Commandes utiles pour finaliser le bootloader :"
+  log "    findmnt $BOOTLOADER_MOUNTPOINT || lsblk -f"
+  log "    sudo mount <partition-efi> $BOOTLOADER_MOUNTPOINT"
+  log "    sudo nix --extra-experimental-features 'nix-command flakes' run .#install-manual -- $HOST --mode switch"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -63,6 +96,7 @@ done
 [[ -d "$REPO_ROOT/targets/hosts/$HOST" ]] || die "targets/hosts/$HOST/ introuvable."
 command -v nixos-rebuild >/dev/null \
   || die "nixos-rebuild introuvable — ce script ne s'utilise que sur un NixOS existant."
+REQUESTED_MODE="$MODE"
 
 step "1/3 — Validation du host '$HOST'"
 bash "$REPO_ROOT/scripts/validate-install.sh" "$HOST" \
@@ -74,18 +108,42 @@ log ""
 
 REBUILD_LAST_LOG=""
 if ! run_rebuild; then
-  if [[ -n "$REBUILD_LAST_LOG" ]] && grep -q "unable to load seccomp BPF program" "$REBUILD_LAST_LOG"; then
+  if rebuild_hit_seccomp_filter_error; then
     warn "Le sandbox Nix du host courant ne supporte pas ce filtre seccomp — nouvelle tentative avec filter-syscalls=false"
     log ""
-    run_rebuild --option filter-syscalls false \
-      || die "nixos-rebuild a échoué même après désactivation de filter-syscalls."
+    REBUILD_EXTRA_ARGS=(--option filter-syscalls false)
+    run_rebuild "${REBUILD_EXTRA_ARGS[@]}" || true
+  fi
+
+  if [[ "$MODE" == "switch" ]] && rebuild_hit_unmounted_boot_error; then
+    capture_bootloader_mountpoint
+    warn "$BOOTLOADER_MOUNTPOINT n'est pas monté sur le host courant — nouvelle tentative en mode test pour appliquer la configuration sans toucher au bootloader"
+    log ""
+    MODE="test"
+    if run_rebuild "${REBUILD_EXTRA_ARGS[@]}"; then
+      EFFECTIVE_MODE="$MODE"
+      BOOTLOADER_FALLBACK=1
+    else
+      log ""
+      print_bootloader_resolution_commands
+      die "nixos-rebuild test a échoué après l'échec d'installation du bootloader."
+    fi
+  elif [[ ${#REBUILD_EXTRA_ARGS[@]} -gt 0 ]]; then
+    die "nixos-rebuild a échoué même après désactivation de filter-syscalls."
   else
     die "nixos-rebuild a échoué."
   fi
 fi
 
 step "3/3 — Terminé"
-ok "Configuration '$HOST' appliquée (mode: $MODE)"
+if [[ "$EFFECTIVE_MODE" != "$REQUESTED_MODE" ]]; then
+  ok "Configuration '$HOST' appliquée (mode effectif : $EFFECTIVE_MODE ; demandé : $REQUESTED_MODE)"
+  warn "Le bootloader n'a pas été mis à jour."
+  log ""
+  print_bootloader_resolution_commands
+else
+  ok "Configuration '$HOST' appliquée (mode: $EFFECTIVE_MODE)"
+fi
 log ""
 log "Vérifications utiles :"
 log "  nixos-rebuild list-generations | head -5"

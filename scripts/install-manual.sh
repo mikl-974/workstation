@@ -18,12 +18,13 @@ REPO_ROOT="$(resolve_repo_root "$_SCRIPT_DIR")"
 
 HOST=""
 METHOD=""
+EXTRA_ARGS=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --method) METHOD="$2"; shift 2 ;;
     -h|--help)
       cat <<EOF
-Usage: install-manual <host> [--method live|existing]
+Usage: install-manual <host> [--method live|existing] [args...]
 
 Détection automatique si --method n'est pas fourni :
   - kernel cmdline contient 'boot=' (live ISO) → live
@@ -33,10 +34,24 @@ Notes :
   - 'existing' applique uniquement la config NixOS du host sur le système courant
   - pour installer sur un autre disque depuis un NixOS existant, utiliser
     directement : install-from-existing <host>
+  - les arguments supplémentaires sont passés au script cible
+    ex. : nix run .#install-manual -- homelab --mode test
 EOF
       exit 0
       ;;
-    *) HOST="$1"; shift ;;
+    --)
+      shift
+      EXTRA_ARGS+=("$@")
+      break
+      ;;
+    *)
+      if [[ -z "$HOST" ]]; then
+        HOST="$1"
+      else
+        EXTRA_ARGS+=("$1")
+      fi
+      shift
+      ;;
   esac
 done
 
@@ -61,10 +76,10 @@ dispatch_app() {
   local local_script="$2"
 
   if [[ "$_SCRIPT_DIR" == /nix/store/* ]]; then
-    exec nix --extra-experimental-features 'nix-command flakes' run "${REPO_ROOT}#${app_name}" -- "$HOST"
+    exec nix --extra-experimental-features 'nix-command flakes' run "${REPO_ROOT}#${app_name}" -- "$HOST" "${EXTRA_ARGS[@]}"
   fi
 
-  exec bash "$_SCRIPT_DIR/$local_script" "$HOST"
+  exec bash "$_SCRIPT_DIR/$local_script" "$HOST" "${EXTRA_ARGS[@]}"
 }
 
 case "$METHOD" in

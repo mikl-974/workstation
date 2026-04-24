@@ -36,9 +36,13 @@ confirm() {
 # Disk currently holding `/` on the running system. Empty if not detectable.
 current_root_disk() {
   local src
+  local parent_disk
   src="$(findmnt -no SOURCE / 2>/dev/null || true)"
   [[ -z "$src" ]] && return 0
-  lsblk -no PKNAME "$src" 2>/dev/null | head -1 | awk '{ if ($1) print "/dev/"$1 }'
+
+  parent_disk="$(lsblk -no PKNAME "$src" 2>/dev/null | head -1 || true)"
+  [[ -n "$parent_disk" ]] || return 0
+  printf '/dev/%s\n' "$parent_disk"
 }
 
 # Refuse to format a disk that is part of the running root filesystem.

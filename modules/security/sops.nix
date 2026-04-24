@@ -1,6 +1,12 @@
-{ lib, config, ... }:
+{ lib, config, inputs, pkgs, ... }:
 let
   cfg = config.infra.security.sops;
+  sopsInstallSecretsRuntimeOnly =
+    inputs.sops-nix.packages.${pkgs.system}.sops-install-secrets.overrideAttrs
+      (_: {
+        outputs = [ "out" ];
+        postInstall = "";
+      });
 in
 {
   options.infra.security.sops = {
@@ -27,6 +33,7 @@ in
 
   config = lib.mkMerge [
     (lib.mkIf cfg.enable {
+      sops.package = lib.mkDefault sopsInstallSecretsRuntimeOnly;
       sops.age.keyFile = cfg.ageKeyFile;
     })
     (lib.mkIf (cfg.enable && cfg.defaultSopsFile != null) {

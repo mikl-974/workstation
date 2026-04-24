@@ -8,7 +8,7 @@
 # - `disko.nix` — GPT/EFI/ext4 layout for the virtio block device.
 #
 # Service stacks are assigned via deployments/inventory.nix.
-{ hostVars, lib, ... }:
+{ config, hostVars, lib, ... }:
 {
   imports = [
     ../../../modules/profiles/server.nix
@@ -23,13 +23,22 @@
   boot.loader.systemd-boot.enable      = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
-  # Uncomment after creating secrets/hosts/homelab.yaml with root.passwordHash:
-  # infra.security.sops = {
-  #   enable          = true;
-  #   defaultSopsFile = ../../../secrets/hosts/homelab.yaml;
-  # };
-  # infra.users.root = {
-  #   enable   = true;
-  #   sopsFile = ../../../secrets/hosts/homelab.yaml;
-  # };
+  infra.security.sops = {
+    enable = true;
+    defaultSopsFile = ../../../secrets/hosts/homelab.yaml;
+  };
+
+  infra.users.admin.hashedPasswordFile =
+    config.sops.secrets."homelab/users/admin-password-hash".path;
+  infra.users.admin.sshAuthorizedKeys = (import ../../../modules/users/authorized-keys.nix).mfo;
+
+  infra.users.root = {
+    enable = true;
+    sopsFile = ../../../secrets/common.yaml;
+  };
+
+  sops.secrets."homelab/users/admin-password-hash" = {
+    key = "hosts.homelab.users.admin.passwordHash";
+    neededForUsers = true;
+  };
 }

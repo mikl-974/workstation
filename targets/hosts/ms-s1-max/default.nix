@@ -6,8 +6,10 @@
     ../../modules/profiles/gaming.nix
     ../../modules/profiles/networking.nix
     ../../modules/profiles/ai-server.nix
+    ../../modules/security/ssh.nix
     ../../modules/users/mfo.nix
     ../../modules/users/dfo.nix
+    ../../modules/users/root.nix
   ];
 
   networking.hostName = hostVars.hostname;
@@ -16,6 +18,9 @@
   system.stateVersion = "24.11";
 
   services.greetd.enable = lib.mkForce false;
+
+  # SSH key-only — mfo's pubkey comes from modules/users/mfo.nix.
+  infra.security.ssh.enable = true;
 
   # Per-host sops password overrides — base user attrs come from modules/users/mfo.nix and dfo.nix.
   users.users.mfo.hashedPasswordFile = config.sops.secrets."ms-s1-max/users/mfo-password-hash".path;
@@ -26,15 +31,12 @@
     defaultSopsFile = ../../../secrets/hosts/ms-s1-max.yaml;
   };
 
+  infra.users.root = {
+    enable = true;
+    sopsFile = ../../../secrets/common.yaml;
+  };
+
   sops.secrets = {
-    "ms-s1-max/bootstrap/mfo-password" = {
-      key  = "hosts.ms-s1-max.users.mfo.bootstrapPassword";
-      mode = "0400";
-    };
-    "ms-s1-max/bootstrap/dfo-password" = {
-      key  = "hosts.ms-s1-max.users.dfo.bootstrapPassword";
-      mode = "0400";
-    };
     "ms-s1-max/users/mfo-password-hash" = {
       key            = "hosts.ms-s1-max.users.mfo.passwordHash";
       neededForUsers = true;

@@ -193,9 +193,7 @@ Premier flux réel branché :
 - consommation réelle :
   - `users.users.mfo.hashedPasswordFile`
   - `users.users.dfo.hashedPasswordFile`
-- secrets runtime root-only aussi exposés pour le bootstrap :
-  - `/run/secrets/ms-s1-max/bootstrap/mfo-password`
-  - `/run/secrets/ms-s1-max/bootstrap/dfo-password`
+- accès SSH : clé publique de `mfo` autorisée partout (cf. `modules/users/authorized-keys.nix`)
 
 Voir `docs/secrets.md`.
 

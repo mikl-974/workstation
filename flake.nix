@@ -212,6 +212,7 @@
               }}/bin/${lib.removeSuffix ".sh" scriptBase}";
             };
         in {
+          init-keys          = mkApp [ pkgs.bash pkgs.openssh pkgs.age ] "init-keys.sh";
           init-host          = mkApp [ pkgs.bash ] "init-host.sh";
           show-config        = mkApp [ pkgs.bash pkgs.nix ] "show-config.sh";
           validate-install   = mkApp [ pkgs.bash pkgs.nix ] "validate-install.sh";

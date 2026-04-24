@@ -6,7 +6,11 @@
   imports = [
     ./desktop-hyprland.nix
     ./networking.nix
+    ../security/ssh.nix
   ];
+
+  # Workstations expose SSH (key-only) so mfo can connect from anywhere on the tailnet.
+  infra.security.ssh.enable = true;
 
   networking.hostName = hostVars.hostname;
   time.timeZone      = hostVars.timezone;

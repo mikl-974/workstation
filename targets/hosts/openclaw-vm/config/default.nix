@@ -1,8 +1,9 @@
-{ hostVars, ... }:
+{ config, hostVars, ... }:
 {
   imports = [
     ../../../../modules/profiles/networking.nix
     ../../../../modules/profiles/virtual-machine.nix
+    ../../../../modules/users/root.nix
     ../../../../stacks/openclaw/default.nix
     ./user.nix
   ];
@@ -23,6 +24,24 @@
       PermitRootLogin = "prohibit-password";
     };
   };
+
+  infra.security.sops = {
+    enable = true;
+    defaultSopsFile = ../../../../secrets/hosts/openclaw-vm.yaml;
+  };
+
+  infra.users.root = {
+    enable = true;
+    sopsFile = ../../../../secrets/common.yaml;
+  };
+
+  sops.secrets."openclaw-vm/users/openclaw-password-hash" = {
+    key = "hosts.openclaw-vm.users.openclaw.passwordHash";
+    neededForUsers = true;
+  };
+
+  users.users.openclaw.hashedPasswordFile =
+    config.sops.secrets."openclaw-vm/users/openclaw-password-hash".path;
 
   infra.stacks.openclaw = {
     enable = true;

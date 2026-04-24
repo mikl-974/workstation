@@ -2,3 +2,7 @@
 result
 result-*
 *.swp
+
+# Bundled sops binary used to encrypt/decrypt secrets locally — not portable.
+sops-v*.linux.*
+sops-v*.darwin.*

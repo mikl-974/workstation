@@ -34,9 +34,22 @@ in
       default = null;
       description = "Optional hashed password for the admin user.";
     };
+
+    hashedPasswordFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      description = "Optional file that contains the hashed password for the admin user.";
+    };
   };
 
-  config = lib.mkIf cfg.enable {
+  config = {
+    assertions = [
+      {
+        assertion = !(cfg.hashedPassword != null && cfg.hashedPasswordFile != null);
+        message = "infra.users.admin: use either hashedPassword or hashedPasswordFile, not both.";
+      }
+    ];
+  } // lib.mkIf cfg.enable {
     users.users.${cfg.name} =
       {
         isNormalUser = true;
@@ -46,6 +59,9 @@ in
       }
       // lib.optionalAttrs (cfg.hashedPassword != null) {
         inherit (cfg) hashedPassword;
+      }
+      // lib.optionalAttrs (cfg.hashedPasswordFile != null) {
+        inherit (cfg) hashedPasswordFile;
       };
   };
 }

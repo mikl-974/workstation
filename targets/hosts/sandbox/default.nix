@@ -10,7 +10,7 @@
 # This VM mirrors production closely so app integration tests run in realistic
 # conditions before promotion. Stacks are ephemeral — reset the VM to clean state
 # between test cycles.
-{ hostVars, lib, ... }:
+{ config, hostVars, lib, ... }:
 {
   imports = [
     ../../../modules/profiles/server.nix
@@ -25,13 +25,22 @@
   boot.loader.systemd-boot.enable      = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
-  # Uncomment after creating secrets/hosts/sandbox.yaml with root.passwordHash:
-  # infra.security.sops = {
-  #   enable          = true;
-  #   defaultSopsFile = ../../../secrets/hosts/sandbox.yaml;
-  # };
-  # infra.users.root = {
-  #   enable   = true;
-  #   sopsFile = ../../../secrets/hosts/sandbox.yaml;
-  # };
+  infra.security.sops = {
+    enable = true;
+    defaultSopsFile = ../../../secrets/hosts/sandbox.yaml;
+  };
+
+  infra.users.admin.hashedPasswordFile =
+    config.sops.secrets."sandbox/users/admin-password-hash".path;
+  infra.users.admin.sshAuthorizedKeys = (import ../../../modules/users/authorized-keys.nix).mfo;
+
+  infra.users.root = {
+    enable = true;
+    sopsFile = ../../../secrets/common.yaml;
+  };
+
+  sops.secrets."sandbox/users/admin-password-hash" = {
+    key = "hosts.sandbox.users.admin.passwordHash";
+    neededForUsers = true;
+  };
 }

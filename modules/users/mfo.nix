@@ -8,10 +8,14 @@
 # for the pattern). On workstations without sops, the user can set a password
 # interactively after install with `passwd mfo`.
 { ... }:
+let
+  keys = import ./authorized-keys.nix;
+in
 {
   users.users.mfo = {
     isNormalUser = true;
     description  = "Mickaël Folio";
     extraGroups  = [ "wheel" "networkmanager" "video" "audio" ];
+    openssh.authorizedKeys.keys = keys.mfo;
   };
 }

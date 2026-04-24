@@ -1,7 +1,7 @@
 keys:
   # Public Age recipient derived from the `mikl-974` SSH public key.
   # The matching private key / derived Age identity must never be committed.
-  - &mfo age1j9nearzgw8k859r0re0r4uzejxr67sg5glfhnhrzuu5e5f63pyesyvdche
+  - &mfo age1r6m227prdlqykz84lgkqg34gw6ha3ypfkf00usqfynxc5lwwuyfs26zf4z
 
 # Per-path creation rules.
 #

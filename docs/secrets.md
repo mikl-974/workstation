@@ -43,7 +43,7 @@ Les clés privées stockées sous `secrets/keys/` sont **locales uniquement**. E
 
 La clé publique Age actuellement déclarée dans `.sops.yaml` est :
 ```
-age1j9nearzgw8k859r0re0r4uzejxr67sg5glfhnhrzuu5e5f63pyesyvdche
+age1r6m227prdlqykz84lgkqg34gw6ha3ypfkf00usqfynxc5lwwuyfs26zf4z
 ```
 
 Cette identité est l'identité historique du repo. Une nouvelle identité générée localement avec `./scripts/init-keys.sh` ne devient utilisable pour `sops` qu'après :

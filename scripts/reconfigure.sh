@@ -36,7 +36,7 @@ run_rebuild() {
   log_file="$(mktemp)"
   set +e
   (
-    cd "$REPO_ROOT" && sudo nixos-rebuild "$MODE" --flake ".#$HOST" "${extra_args[@]}"
+    cd "$REPO_ROOT" && sudo nixos-rebuild "$MODE" --impure --flake ".#$HOST" "${extra_args[@]}"
   ) 2>&1 | tee "$log_file"
   status=${PIPESTATUS[0]}
   set -e
@@ -107,21 +107,28 @@ log "  Repo : $REPO_ROOT"
 log ""
 
 REBUILD_LAST_LOG=""
-if ! run_rebuild; then
-  if rebuild_hit_seccomp_filter_error; then
-    warn "Le sandbox Nix du host courant ne supporte pas ce filtre seccomp — nouvelle tentative avec filter-syscalls=false"
-    log ""
-    REBUILD_EXTRA_ARGS=(--option filter-syscalls false)
-    run_rebuild "${REBUILD_EXTRA_ARGS[@]}" || true
-  fi
+REBUILD_OK=0
+if run_rebuild; then
+  REBUILD_OK=1
+fi
 
+if [[ $REBUILD_OK -eq 0 ]] && rebuild_hit_seccomp_filter_error; then
+  warn "Le sandbox Nix du host courant ne supporte pas ce filtre seccomp — nouvelle tentative avec filter-syscalls=false"
+  log ""
+  REBUILD_EXTRA_ARGS=(--option filter-syscalls false)
+  if run_rebuild "${REBUILD_EXTRA_ARGS[@]}"; then
+    REBUILD_OK=1
+  fi
+fi
+
+if [[ $REBUILD_OK -eq 0 ]]; then
   if [[ "$MODE" == "switch" ]] && rebuild_hit_unmounted_boot_error; then
     capture_bootloader_mountpoint
     warn "$BOOTLOADER_MOUNTPOINT n'est pas monté sur le host courant — nouvelle tentative en mode test pour appliquer la configuration sans toucher au bootloader"
     log ""
     MODE="test"
     if run_rebuild "${REBUILD_EXTRA_ARGS[@]}"; then
-      EFFECTIVE_MODE="$MODE"
+      REBUILD_OK=1
       BOOTLOADER_FALLBACK=1
     else
       log ""
@@ -135,8 +142,10 @@ if ! run_rebuild; then
   fi
 fi
 
+EFFECTIVE_MODE="$MODE"
+
 step "3/3 — Terminé"
-if [[ "$EFFECTIVE_MODE" != "$REQUESTED_MODE" ]]; then
+if [[ $BOOTLOADER_FALLBACK -eq 1 || "$EFFECTIVE_MODE" != "$REQUESTED_MODE" ]]; then
   ok "Configuration '$HOST' appliquée (mode effectif : $EFFECTIVE_MODE ; demandé : $REQUESTED_MODE)"
   warn "Le bootloader n'a pas été mis à jour."
   log ""

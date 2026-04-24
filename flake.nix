@@ -272,6 +272,8 @@
           install-from-existing  = mkApp [ pkgs.bash pkgs.git pkgs.nix pkgs.util-linux pkgs.rsync ] "install-from-existing.sh";
           reconfigure            = mkApp [ pkgs.bash pkgs.nix ] "reconfigure.sh";
           orbstack-cloud-init    = mkApp [ pkgs.bash pkgs.gawk pkgs.gnused pkgs.coreutils ] "render-orbstack-cloud-init.sh";
+          homelab-cloud-init     = mkApp [ pkgs.bash pkgs.gawk pkgs.gnused pkgs.coreutils ] "render-homelab-cloud-init.sh";
+          bootstrap-host-on-orbstack = mkApp [ pkgs.bash pkgs.openssh pkgs.coreutils pkgs.gnugrep ] "bootstrap-host-on-orbstack.sh";
           post-install-check = mkApp [ pkgs.bash pkgs.nix pkgs.openssh ] "post-install-check.sh";
           validate-inventory = mkApp [ pkgs.bash pkgs.nix ] "validate-inventory.sh";
           deploy-contabo     = mkApp [ pkgs.bash pkgs.colmena ] "deploy-contabo.sh";

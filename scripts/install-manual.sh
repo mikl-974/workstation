@@ -5,7 +5,7 @@
 #   - live ISO NixOS        → install-from-live
 #   - NixOS déjà installé   → reconfigure
 #
-# Usage : install-manual <host> [--method live|existing]
+# Usage : install-manual <host> [--method live|existing] [args...]
 
 set -euo pipefail
 

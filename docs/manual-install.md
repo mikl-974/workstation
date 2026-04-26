@@ -1,163 +1,29 @@
 # Installation manuelle
 
-Quand NixOS Anywhere n'est pas utilisable (pas de SSH, pas de kexec, hyperviseur
-non compatible, etc.), trois flux existent. **Choisir le bon flux dépend
-uniquement de l'état du disque cible**, pas de la procédure mentale d'install.
-
-`install-manual` auto-détecte maintenant :
-- **live** → `install-from-live`
-- **existing** → `reconfigure` (application non destructive de la config sur le NixOS courant)
-
-## Quel flux pour quel cas ?
-
-| Cas | État du disque cible | Tu veux | Commande |
-|---|---|---|---|
-| **A. Reconfigurer** | NixOS déjà installé et bootable, tu gardes le layout | appliquer ta config par-dessus, sans toucher au disque | `sudo nix run .#reconfigure -- <host>` |
-| **B. Installer sur un autre disque** | Disque cible ≠ disque qui porte `/` sur le système courant | partitionner et installer un nouveau système sur ce disque | `sudo nix run .#install-from-existing -- <host>` |
-| **C. Réinstaller sur le disque qui porte `/`** | Le disque cible est en cours d'utilisation | wipe complet + réinstall | impossible en place — booter sur un live ISO et lancer `install-from-live`, ou utiliser NixOS Anywhere via kexec |
-
-Cas typiques :
-
-- **OrbStack, hyperviseur (UTM, VMware, Proxmox), VPS qui livre déjà un NixOS** → cas A : `reconfigure`.
-- **Réinstall propre d'un disque secondaire ou en passthrough** → cas B : `install-from-existing`.
-- **Wipe + install neuve sur la machine courante** → cas C : live ISO USB ou `install-anywhere localhost` via kexec.
-
-Tous les flux exécutent `validate-install` avant toute action, et tous les flux
-destructifs (B et C) appliquent **exactement** la même séquence
-`disko → nixos-install --flake`. Le résultat système est identique entre
-A, B et C dès qu'on parle uniquement de la configuration logicielle.
-
----
-
-## A. Reconfigurer (le plus fréquent)
+Le dispatcher :
 
 ```bash
-# 1. Récupérer le repo (premier setup uniquement)
-nix-shell -p git
-git clone https://github.com/mikl-974/infra /etc/infra
-cd /etc/infra
-
-# 2. Appliquer la config
-sudo nix run .#reconfigure -- <host>
-# équivaut à :
-#   nix run .#validate-install -- <host>
-#   sudo nixos-rebuild switch --flake .#<host>
+nix run .#install-manual -- <host>
 ```
 
-Modes alternatifs : `--mode test` (apply sans changer le boot par défaut),
-`--mode boot` (stage pour le prochain reboot), `--mode dry-activate` (no-op
-descriptif).
+Decide entre :
 
-**Identique à une install neuve ?** Côté config Nix : oui, à 100%.
-Différences inévitables :
+- `install-from-live`
+- `reconfigure`
 
-- layout disque : celui de l'installeur d'origine, pas celui de `disko.nix`
-- `system.stateVersion` : celle d'origine si différente — laisse-la, ne la force pas
-- état héritée (`/var`, `/home`, …) : préservée
+## Cas utile aujourd'hui
 
-Pour un usage VM dev (OrbStack), ces différences n'ont aucun impact pratique.
+### `ms-s1-max`
 
-## B. Installer sur un autre disque depuis un NixOS existant
+Host principal sans `disko.nix`.
+La voie normale est :
 
 ```bash
-sudo nix run .#install-from-existing -- <host>
+nix run .#install-manual -- ms-s1-max
 ```
 
-Garde-fou : refuse si `vars.nix:disk` correspond au disque qui porte `/`.
-
-## C. Réinstaller le disque courant
-
-Pas possible en place. Trois options :
+ou, sur un systeme deja installe :
 
 ```bash
-# C.1 — Live ISO NixOS, depuis la machine cible bootée sur USB
-sudo nix run .#install-from-live -- <host>
-
-# C.2 — NixOS Anywhere en localhost via kexec (le plus simple si pas de USB)
-nix run .#install-anywhere -- <host> 127.0.0.1
-# (la cible doit avoir un sshd actif accessible en root, et nixos-anywhere
-#  installe son installeur via kexec ; au reboot, le système est neuf)
-
-# C.3 — NixOS Anywhere depuis une autre machine
-nix run .#install-anywhere -- <host> <ip-cible>
+nix run .#reconfigure -- ms-s1-max
 ```
-
----
-
-## Récapitulatif des apps
-
-| App | Action | Destructif |
-|---|---|---|
-| `nix run .#reconfigure -- <host>` | applique la config sur le système courant | non |
-| `sudo nix run .#install-from-live -- <host>` | install neuve depuis live ISO | oui (disque cible) |
-| `sudo nix run .#install-from-existing -- <host>` | install neuve depuis NixOS existant, autre disque | oui (disque cible, refuse `/`) |
-| `nix run .#install-manual -- <host>` | dispatcher live↔reconfigure selon le contexte | non si `existing`, oui si `live` |
-| `nix run .#install-anywhere -- <host> <ip>` | install à distance via SSH+kexec | oui |
-| `nix run .#orbstack-cloud-init` | rend le user-data cloud-init pour la VM `orbstack` | non |
-
----
-
-## Pré-requis communs
-
-- `targets/hosts/<host>/vars.nix` complet (et pour B/C : `disk` correct, vérifier `lsblk`)
-- `targets/hosts/<host>/default.nix` exposé via `nixosConfigurations` dans `flake.nix`
-- pour B/C : `targets/hosts/<host>/disko.nix` présent
-- `nix run .#validate-install -- <host>` passe sans erreur
-
-## En cas d'échec
-
-| Symptôme | Diagnostic |
-|---|---|
-| `validate-install a échoué` | placeholders restants — `nix run .#doctor -- --host <host>` |
-| disko refuse de formater | partition montée — `umount -R /mnt` puis recommencer |
-| `nixos-install` casse en plein milieu | relancer le script : disko est idempotent |
-| `nixos-rebuild` se plaint d'un `fileSystems` manquant | la config référence un point de montage que la VM n'a pas — soit ajuster le host, soit créer le point de montage |
-| Pas de réseau sur le live ISO | `wpa_supplicant -B -i wlan0 -c <(wpa_passphrase SSID PASS) && dhclient wlan0` |
-| Détection auto du dispatcher se trompe | forcer avec `--method live` ou `--method existing` (`existing` = reconfigure) |
-
----
-
-## Référence détaillée (partitionnement manuel sans disko, etc.)
-
-Voir [`docs/manual-install-reference.md`](manual-install-reference.md).
-
----
-
-## OrbStack — bootstrap full-auto via cloud-init
-
-OrbStack supporte `cloud-init` au premier boot. On lui passe un `user-data`
-qui :
-
-1. autorise la clé SSH `mfo`
-2. dépose la clé age dans `/var/lib/sops-nix/key.txt`
-3. clone le repo `infra` dans `/etc/infra`
-4. lance `nixos-rebuild switch --flake /etc/infra#orbstack`
-
-### Workflow
-
-```bash
-# 1. Rendre le user-data (lit la clé age locale ou ~/.config/sops/age/keys.txt)
-nix run .#orbstack-cloud-init
-
-# 2. Créer la VM (sur le Mac hôte d'OrbStack)
-orb create -a arm64 -u root \
-  --user-data secrets/keys/orbstack-cloud-init.yaml \
-  nixos orbstack
-
-# 3. ~2 min plus tard
-ssh mfo@orbstack@orb
-```
-
-### Pré-requis
-
-- la clé Age privée utilisée doit être **la vraie clé `mfo`**, celle qui
-  correspond au recipient déclaré dans `.sops.yaml` et déjà présent dans les
-  fichiers SOPS existants. Exemple :
-  `nix run .#orbstack-cloud-init -- --age-key ~/.config/sops/age/keys.txt`
-- `secrets/keys/age/key.txt` n'est utilisable que si tu y as explicitement mis
-  cette même clé `mfo`
-
-### Idempotence
-
-`services.cloud-init.enable = true` est conservé sur le host : recréer la
-même VM avec le même user-data refait le bootstrap proprement.

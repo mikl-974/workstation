@@ -182,7 +182,7 @@ declare -gA __home_nix_visited=()
 _collect_home_nix_tree_recursive() {
   local entry="$1"
   local resolved
-  resolved="$(realpath -m "$entry")"
+  resolved="$(realpath "$entry")"
 
   [[ -f "$resolved" ]] || return 0
   if [[ -n "${__home_nix_visited[$resolved]:-}" ]]; then

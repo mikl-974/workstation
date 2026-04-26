@@ -4,8 +4,7 @@
     ../../../../modules/darwin/base.nix
     ../../../../modules/darwin/homebrew.nix
     ./user.nix
-    ./apps.nix
-    ./networking.nix
+    ./capabilities.nix
   ];
 
   networking.hostName = hostVars.hostname;

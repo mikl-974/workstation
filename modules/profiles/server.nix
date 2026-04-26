@@ -1,5 +1,4 @@
-# Server-class profile (vendored from the previous `homelab`
-# `nix/profiles/server.nix`, adapted to the local `infra.*` namespace).
+# Server-class profile.
 #
 # Imports the modules a headless server needs together:
 # - hardened sudo;

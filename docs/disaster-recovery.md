@@ -6,10 +6,10 @@
 2. Restaurer la clé Age **privée** correspondant à la recipient `mfo` déclarée dans `.sops.yaml` (hors repo, jamais commitée — typiquement dérivée de la clé SSH Ed25519 de `mikl-974`).
 3. Pouvoir déchiffrer les secrets SOPS requis (`secrets/hosts/<host>.yaml` au minimum).
 
-## Reconstruction d'une **workstation** (`main`, `laptop`, `gaming`, `ms-s1-max`)
+## Reconstruction d'une **workstation** (`ms-s1-max`)
 
 1. Booter sur un live USB NixOS récent.
-2. `nix run .#install-anywhere -- <host>` ou suivre `docs/manual-install.md` selon le contexte.
+2. Suivre `docs/manual-install.md` selon le contexte.
 3. Au premier boot : `nixos-rebuild switch --flake .#<host>` localement.
 4. Pour `ms-s1-max` : déposer la clé Age dans `/var/lib/sops-nix/key.txt` avant le premier rebuild qui consomme un secret.
 

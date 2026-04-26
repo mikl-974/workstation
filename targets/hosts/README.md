@@ -1,49 +1,32 @@
 # targets/hosts/
 
-Machines réelles gérées par ce repo.
+Machines concretes versionnees par le repo.
 
-Chaque dossier contient la vérité d’une machine donnée.
+Ce dossier ne contient pas de definitions de VM portables.
+Une VM qui peut etre deployee sur plusieurs machines physiques doit vivre dans
+`targets/vms/`.
 
-Une VM ne change pas cette règle :
-- on ne crée pas de host abstrait `vm`
-- on garde un host concret
-- on lui ajoute le profil `modules/profiles/virtual-machine.nix` si nécessaire
+## Actifs
 
-## Structure typique
+- `mac-mini/`
+- `ms-s1-max/`
+- `contabo/`
 
-### NixOS
-- `vars.nix` : variables machine opératoires
-- `default.nix` : entrée du host
-- `config/` : responsabilités machine lisibles quand le host le justifie
-- `disko.nix` : layout disque seulement si le host est réellement prévu pour NixOS Anywhere
-- `modules/profiles/virtual-machine.nix` : profil à importer si ce host concret est une VM
+## Convention
 
-### Darwin
-- `vars.nix` : variables machine opératoires
-- `default.nix` : entrée du host
-- `config/` : responsabilités machine Darwin
+### `ms-s1-max`
 
-## Exemple concret
+- `default.nix` delegue a `config/default.nix`
+- `config/capabilities.nix` est la carte logicielle du poste
 
-`openclaw-vm` est maintenant un exemple réel de ce modèle :
-- host concret : `targets/hosts/openclaw-vm/`
-- profil VM : `modules/profiles/virtual-machine.nix`
-- stack portée : `stacks/openclaw/`
+### `contabo`
 
-Un host VM reste un host concret ; seul son import change :
+- `default.nix` declare la base serveur et Dokploy
+- `disko.nix` declare le layout d'installation
 
-```nix
-{ hostVars, ... }:
-{
-  imports = [
-    ../../../../modules/profiles/networking.nix
-    ../../../../modules/profiles/virtual-machine.nix
-    ../../../../stacks/openclaw/default.nix
-    ./user.nix
-  ];
+### `mac-mini`
 
-  networking.hostName = hostVars.hostname;
-}
-```
-
-Le repo versionne maintenant un vrai target VM concret : `openclaw-vm`.
+- `config/capabilities.nix` est la carte logicielle du host
+- `config/nix-apps.nix` regroupe les apps Nix
+- `config/casks.nix` regroupe les casks Homebrew
+- `config/mas-apps.nix` regroupe les apps Mac App Store

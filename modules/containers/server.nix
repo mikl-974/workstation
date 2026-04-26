@@ -1,5 +1,4 @@
-# Server-side container baseline (vendored from the previous `homelab`
-# `nix/modules/containers/` aggregator).
+# Server-side container baseline.
 #
 # Activates Docker via `infra.containers.docker`, gives the standard server
 # operator accounts membership in the docker group, and opens HTTP/HTTPS so

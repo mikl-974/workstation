@@ -14,8 +14,9 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Declarative disk partitioning — required for NixOS Anywhere installations.
-    # See docs/nixos-anywhere.md and targets/hosts/main/disko.nix.
+    # Declarative disk partitioning — required for hosts that are installed
+    # through NixOS Anywhere in this repo.
+    # See docs/nixos-anywhere.md and targets/hosts/contabo/disko.nix.
     disko = {
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -43,12 +44,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    nix-openclaw = {
-      url = "github:openclaw/nix-openclaw";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.home-manager.follows = "home-manager";
-    };
-
     nix-darwin = {
       url = "github:nix-darwin/nix-darwin";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -57,7 +52,7 @@
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
   };
 
-  outputs = inputs@{ self, nixpkgs, disko, home-manager, sops-nix, nix-openclaw, nix-darwin, nix-homebrew, noctalia, colmena, ... }:
+  outputs = inputs@{ self, nixpkgs, disko, home-manager, sops-nix, nix-darwin, nix-homebrew, noctalia, colmena, ... }:
     let
       lib = nixpkgs.lib;
       systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
@@ -132,26 +127,6 @@
     in
     {
       nixosConfigurations = {
-        main = mkHost {
-          vars   = import ./targets/hosts/main/vars.nix;
-          modules = [ disko.nixosModules.disko ./targets/hosts/main/default.nix ./targets/hosts/main/disko.nix ];
-        };
-
-        laptop = mkHost {
-          vars   = import ./targets/hosts/laptop/vars.nix;
-          modules = [ disko.nixosModules.disko ./targets/hosts/laptop/default.nix ./targets/hosts/laptop/disko.nix ];
-        };
-
-        gaming = mkHost {
-          vars   = import ./targets/hosts/gaming/vars.nix;
-          modules = [ disko.nixosModules.disko ./targets/hosts/gaming/default.nix ./targets/hosts/gaming/disko.nix ];
-        };
-
-        openclaw-vm = mkHost {
-          vars   = import ./targets/hosts/openclaw-vm/vars.nix;
-          modules = [ disko.nixosModules.disko ./targets/hosts/openclaw-vm/default.nix ./targets/hosts/openclaw-vm/disko.nix ];
-        };
-
         ms-s1-max = mkHost {
           vars   = import ./targets/hosts/ms-s1-max/vars.nix;
           modules = [ ./targets/hosts/ms-s1-max/default.nix ];
@@ -161,59 +136,12 @@
           vars   = import ./targets/hosts/contabo/vars.nix;
           modules = [ disko.nixosModules.disko ./targets/hosts/contabo/default.nix ./targets/hosts/contabo/disko.nix ];
         };
-
-        homelab = mkHost {
-          vars   = import ./targets/hosts/homelab/vars.nix;
-          modules = [ disko.nixosModules.disko ./targets/hosts/homelab/default.nix ./targets/hosts/homelab/disko.nix ];
-        };
-
-        sandbox = mkHost {
-          vars   = import ./targets/hosts/sandbox/vars.nix;
-          modules = [ disko.nixosModules.disko ./targets/hosts/sandbox/default.nix ./targets/hosts/sandbox/disko.nix ];
-        };
-
-        # OrbStack VM — no disko (OrbStack provides the disk layout).
-        # Brought up with: sudo nixos-rebuild switch --flake .#orbstack
-        orbstack = mkHost {
-          vars   = import ./targets/hosts/orbstack/vars.nix;
-          modules = [ ./targets/hosts/orbstack/default.nix ];
-        };
       };
 
       diskoConfigurations = {
-        main = mkDiskoConfig {
-          vars = import ./targets/hosts/main/vars.nix;
-          diskoModule = ./targets/hosts/main/disko.nix;
-        };
-
-        laptop = mkDiskoConfig {
-          vars = import ./targets/hosts/laptop/vars.nix;
-          diskoModule = ./targets/hosts/laptop/disko.nix;
-        };
-
-        gaming = mkDiskoConfig {
-          vars = import ./targets/hosts/gaming/vars.nix;
-          diskoModule = ./targets/hosts/gaming/disko.nix;
-        };
-
-        openclaw-vm = mkDiskoConfig {
-          vars = import ./targets/hosts/openclaw-vm/vars.nix;
-          diskoModule = ./targets/hosts/openclaw-vm/disko.nix;
-        };
-
         contabo = mkDiskoConfig {
           vars = import ./targets/hosts/contabo/vars.nix;
           diskoModule = ./targets/hosts/contabo/disko.nix;
-        };
-
-        homelab = mkDiskoConfig {
-          vars = import ./targets/hosts/homelab/vars.nix;
-          diskoModule = ./targets/hosts/homelab/disko.nix;
-        };
-
-        sandbox = mkDiskoConfig {
-          vars = import ./targets/hosts/sandbox/vars.nix;
-          diskoModule = ./targets/hosts/sandbox/disko.nix;
         };
       };
 
@@ -271,9 +199,6 @@
           install-from-live      = mkApp [ pkgs.bash pkgs.git pkgs.nix pkgs.util-linux pkgs.rsync ] "install-from-live.sh";
           install-from-existing  = mkApp [ pkgs.bash pkgs.git pkgs.nix pkgs.util-linux pkgs.rsync ] "install-from-existing.sh";
           reconfigure            = mkApp [ pkgs.bash pkgs.nix ] "reconfigure.sh";
-          orbstack-cloud-init    = mkApp [ pkgs.bash pkgs.gawk pkgs.gnused pkgs.coreutils ] "render-orbstack-cloud-init.sh";
-          homelab-cloud-init     = mkApp [ pkgs.bash pkgs.gawk pkgs.gnused pkgs.coreutils ] "render-homelab-cloud-init.sh";
-          bootstrap-host-on-orbstack = mkApp [ pkgs.bash pkgs.openssh pkgs.coreutils pkgs.gnugrep ] "bootstrap-host-on-orbstack.sh";
           post-install-check = mkApp [ pkgs.bash pkgs.nix pkgs.openssh ] "post-install-check.sh";
           validate-inventory = mkApp [ pkgs.bash pkgs.nix ] "validate-inventory.sh";
           deploy-contabo     = mkApp [ pkgs.bash pkgs.colmena ] "deploy-contabo.sh";

@@ -1,201 +1,153 @@
 # Architecture du repo `infra`
 
-## Principe
+## Perimetre
 
-Le repo Git s'appelle encore `workstation`, mais son rôle cible est `infra`.
-Il porte maintenant ensemble :
-- machines NixOS
-- machines Darwin
-- users
-- rôles Home Manager
-- dotfiles
-- stacks
-- secrets
+Le repo est volontairement centre sur trois hosts reels :
 
-## Frontières
+- `mac-mini`
+- `ms-s1-max`
+- `contabo`
 
-| Couche | Rôle | Exemple |
+Les faux hosts, VMs de test et experiments OrbStack ont ete retires.
+
+Les VMs ne sont pas niees par le modele.
+Elles sont simplement sorties de `targets/hosts/` parce qu'une VM est portable
+entre plusieurs machines physiques et ne doit pas etre confondue avec un host.
+
+## Couches
+
+| Couche | Role | Source de verite |
 |---|---|---|
-| `modules/` | briques réutilisables | profiles, security, darwin |
-| `targets/hosts/` | réalité machine | `main`, `openclaw-vm`, `mac-mini` |
-| `home/users/` | identité d’un user | `mikl.nix`, `mfo.nix`, `dfo.nix`, `zfo.nix`, `lfo.nix` |
-| `home/roles/` | binding réutilisable par usage | `desktop-hyprland.nix`, `terminal-kitty.nix` |
-| `home/targets/` | composition finale par machine | `main.nix`, `openclaw-vm.nix`, `ms-s1-max.nix` |
-| `dotfiles/` | contenu brut réutilisable | Hyprland, Kitty, GTK |
-| `stacks/` | services/applications | `ai-server/`, `openclaw/` |
-| `secrets/` | source chiffrée | `secrets/hosts/ms-s1-max.yaml` |
+| `modules/` | briques Nix reutilisables | modules systeme, reseau, securite, desktop |
+| `targets/hosts/` | machines concretes | un dossier par host reel |
+| `targets/vms/` | definitions de VM portables | une definition reutilisable, independante du host physique |
+| `home/` | composition utilisateur | users, roles, binding final par host |
+| `dotfiles/` | fichiers applicatifs | Hyprland, terminal, launchers, notifications |
+| `stacks/` | services deployables | contrat `stack.nix` par stack |
+| `deployments/` | placement des stacks | `topology.nix`, `inventory.nix`, `validation.nix` |
+| `secrets/` | donnees chiffrees | SOPS |
+| `tofu/` | targets cloud | workspaces OpenTofu |
 
-Le contexte "machine virtuelle" ne crée pas un nouveau type de target :
-- le host reste concret dans `targets/hosts/`
-- la VM est modélisée comme profil réutilisable dans `modules/profiles/virtual-machine.nix`
+## Regle de modelisation
 
-## NixOS vs Darwin
+Le repo distingue maintenant clairement deux choses :
 
-Le repo distingue maintenant explicitement :
-- `nixosConfigurations.*` pour les targets NixOS
-- `darwinConfigurations.*` pour les targets Darwin
+- les capacites locales d'une machine
+- les services deployables du modele `target -> stack instances`
+- les definitions de VM portables
 
-Un target Darwin reste un target concret dans `targets/hosts/`.
-Il ne devient pas un faux host NixOS.
+### VMs portables
 
-## Bare metal vs VM
+Une VM portable ne vit pas dans `targets/hosts/`.
 
-- `bare-metal` et `virtual-machine` décrivent un contexte machine
-- ce ne sont ni des hosts abstraits, ni des modes d'installation
-- un host VM importe `modules/profiles/virtual-machine.nix`
-- `vars.nix` reste réservé aux valeurs opératoires machine-locales (`disk`, `timezone`, etc.)
-- le profil VM ne prend pas en charge `disko.nix`, le disque réel, ni les guest tools hyperviseur-spécifiques
+Elle vit dans :
 
-## NixOS moderne actuel
+- `targets/vms/<name>/`
 
-Cinq targets NixOS réels valident maintenant le modèle moderne :
-- `main` en mono-user explicite
-- `laptop` en mono-user explicite
-- `gaming` en mono-user explicite
-- `openclaw-vm` en host VM de service explicite
-- `ms-s1-max` en multi-user explicite
+et decrit par exemple :
 
-### `main`
-- host concret : `targets/hosts/main/`
-- composition Home Manager : `home/targets/main.nix`
-- identité user : `home/users/mikl.nix`
-- rôle réutilisable : `home/roles/desktop-hyprland.nix`
-- installation NixOS Anywhere : structure prête via `targets/hosts/main/disko.nix`, disque réel encore machine-dépendant
+- son role
+- sa base logicielle
+- son format d'image ou son bootstrap
+- les variables attendues pour l'hebergeur
 
-### `laptop`
-- host concret : `targets/hosts/laptop/`
-- composition Home Manager : `home/targets/laptop.nix`
-- identité user : `home/users/mikl.nix`
-- rôle réutilisable : `home/roles/desktop-hyprland.nix`
-- installation NixOS Anywhere : structure prête via `targets/hosts/laptop/disko.nix`, disque réel encore machine-dépendant
+Ce qu'une definition de VM ne choisit pas :
 
-### `gaming`
-- host concret : `targets/hosts/gaming/`
-- composition Home Manager : `home/targets/gaming.nix`
-- identité user : `home/users/mikl.nix`
-- rôles réutilisables : `home/roles/desktop-hyprland.nix`, `home/roles/gaming-steam.nix`
-- installation NixOS Anywhere : structure prête via `targets/hosts/gaming/disko.nix`, disque réel encore machine-dépendant
+- le host physique final
+- le placement courant sur une machine donnee
+- l'identite d'un serveur reel
 
-### `openclaw-vm`
-- host concret : `targets/hosts/openclaw-vm/`
-- profil réutilisable : `modules/profiles/virtual-machine.nix`
-- stack portée : `stacks/openclaw/`
-- module upstream consommé : `nix-openclaw.nixosModules.openclaw-gateway`
-- composition Home Manager : `home/targets/openclaw-vm.nix` volontairement vide
-- base système : VM de service minimale avec SSH et boot explicite
-- installation NixOS Anywhere : structure prête via `targets/hosts/openclaw-vm/disko.nix`, disque réel encore machine-dépendant
+Autrement dit :
 
-`main`, `laptop` et `gaming` ne dépendent plus d'aucun fallback Home Manager.
+- `targets/hosts/` = "ou ca tourne concretement"
+- `targets/vms/` = "ce qu'est la VM en tant qu'objet portable"
 
-## Users normalisés
+### Capacites locales
 
-Le repo expose maintenant des identités explicites dans `home/users/` :
-- `mfo` = Mickaël Folio
-- `dfo` = Delphine Folio
-- `zfo` = Zoé Folio
-- `lfo` = Léna Folio
+Une capacite locale vit dans la cible elle-meme.
 
-Définir un user dans `home/users/` ne l'active pas automatiquement.
-L'affectation réelle reste déclarée dans `home/targets/<host>.nix`.
+Exemple :
 
-Un host de service comme `openclaw-vm` peut garder un binding Home Manager vide
-si aucune composition utilisateur n'est réellement utile.
+- `targets/hosts/ms-s1-max/config/capabilities.nix`
 
-## Darwin actuel
+Ce fichier repond directement a la question :
 
-Le premier target Darwin modélisé est `mac-mini`.
+- "qu'est-ce que cette machine a d'installe et d'active ?"
 
-### Base réutilisable
-- `modules/darwin/base.nix` : base commune Darwin (`allowUnfree`, flakes, revision, stateVersion, hostPlatform)
-- `modules/darwin/homebrew.nix` : activation Homebrew / nix-homebrew commune
+On y trouve explicitement :
 
-### Spécifique machine
-- `targets/hosts/mac-mini/config/user.nix` : user principal Darwin
-- `targets/hosts/mac-mini/config/apps.nix` : paquets Nix + casks Homebrew
-- `targets/hosts/mac-mini/config/networking.nix` : apps MAS réseau/VPN
+- `ollama`
+- `llama-cpp`
+- `opencode-desktop`
+- `VS Code`
+- `Rider`
+- `WebStorm`
+- `GitKraken`
+- `Flatpak`
+- `ROCm`
 
-### Principe d'installation
-- Nix quand le package est proprement disponible sur Darwin
-- Homebrew quand le bon adapter macOS est Homebrew
-- MAS quand l'App Store est le canal pragmatique
+### Services deployables
 
-## Secrets
+Une stack de service reste decrite dans `stacks/<nom>/stack.nix` puis placee
+dans `deployments/inventory.nix`.
 
-Le premier flux réel branché utilise `sops-nix` pour `ms-s1-max` :
-- le YAML chiffré vit dans `secrets/hosts/ms-s1-max.yaml`
-- le host l'active via `infra.security.sops.defaultSopsFile`
-- les hashes de mot de passe sont injectés vers `hashedPasswordFile`
-- les bootstrap passwords sont matérialisés en root-only sous `/run/secrets/ms-s1-max/bootstrap/`
+Exemple :
 
-## Legacy
+- `homepage`, `beszel`, `tsdproxy`, `kopia`, `nextcloud` sur `contabo`
+- `uptime-kuma` sur `azure-ext`
 
-Le fallback `home/users/default.nix` a été retiré.
-Les hosts NixOS utilisent maintenant tous un binding explicite dans `home/targets/`.
-Le target Darwin `mac-mini` reste séparé de cette logique Home Manager NixOS.
+`ms-s1-max` ne porte plus de stack IA locale.
+Son IA reste un choix de machine locale, pas un service infra partage.
 
-## Modèle target → stack instances
+## Hosts
 
-Le repo distingue trois objets :
+### `ms-s1-max`
 
-- un **target** est un endroit où l'on exécute quelque chose. Un host NixOS est un target particulier (`kind = "nixosHost"`) ; un workspace cloud OpenTofu en est un autre (`kind = "azureContainerApps"`, `gcpCloudRun`, `cloudflareContainers`).
-- une **stack** décrit son contrat portable dans `stacks/<stack>/stack.nix` (mode de déploiement, rôles, targets supportés, secrets, besoins, volumes).
-- un **assignment** dit qu'une instance d'une stack est placée sur un target.
+- NixOS
+- workstation principale
+- base desktop : `modules/profiles/workstation-common.nix`
+- user systeme : `modules/users/mfo.nix`
+- Home Manager : `home/targets/ms-s1-max.nix`
+- mapping logiciel local : `targets/hosts/ms-s1-max/config/capabilities.nix`
+- IA GPU AMD : `pkgs.ollama-rocm`, `pkgs.llama-cpp-rocm`, `nixpkgs.config.rocmSupport = true`
+- runtime systeme ROCm : `rocm-runtime`, `rocminfo`, `rocm-smi`, `amdsmi`
 
-Les trois sources de vérité associées :
+### `contabo`
 
-| Couche | Fichier |
-|---|---|
-| topologie déclarée | `deployments/topology.nix` |
-| placement effectif | `deployments/inventory.nix` |
-| contrats des stacks | `stacks/<stack>/stack.nix` |
-| validation stricte | `deployments/validation.nix` (app `nix run .#validate-inventory`) |
+- NixOS
+- serveur headless
+- base serveur : `modules/profiles/server.nix`
+- runtime d'apps : Dokploy
+- placement des stacks dans `deployments/inventory.nix`
 
-Le `runtime` d'un target précise **comment** il est opéré (`nixos-systemd`, `dokploy`, `compose`, `tofu`). Il reste subordonné au repo : les contrats, les affectations et les secrets restent ici, jamais dans le control plane runtime.
+### `mac-mini`
 
-Voir aussi `deployments/README.md`, `docs/stack-classification.md`, `docs/colmena.md`, `docs/opentofu.md`.
+- Darwin
+- composition `nix-darwin`
+- mapping logiciel local : `targets/hosts/mac-mini/config/capabilities.nix`
+- apps reparties entre Nix, Homebrew et MAS
 
-## Conflit de nom `mac-mini`
+## Home Manager
 
-Le repo `infra` contient un target `mac-mini` qui est un **Darwin** (`darwinConfigurations.mac-mini`, cf. `targets/hosts/mac-mini/`). Le repo historique `homelab` contenait un target `mac-mini` qui était un **NixOS** server-class portant une partie des stacks LAN (`immich`, `n8n`, `pihole`, `openwebui`, `opencode`, `tsdproxy`, `kopia`, agent `beszel`).
+Le modele retenu est simple :
 
-Tant que ce conflit de nom n'est pas tranché :
+- `home/users/` : identite
+- `home/roles/` : composition reutilisable
+- `home/targets/` : binding final par host
 
-- `topology.nix` ne déclare **pas** de target `mac-mini` côté `nixosHost` — le seul `mac-mini` du repo reste le Darwin, et il n'est volontairement pas dans le modèle de stacks ;
-- les stacks à vocation LAN qui n'ont pas d'autre host candidat aujourd'hui (`immich`, `n8n`, `pihole`, `openwebui`, `opencode`, `rustdesk`) ont un contrat valide mais aucune affectation (cf. `docs/stack-classification.md`) ;
-- `ai-server` fait exception : il est consommé directement par `ms-s1-max` via `modules/profiles/ai-server.nix` et l'inventory l'assigne en conséquence (`ai-server-ms-s1-max`) ;
-- ces stacks sont prêtes à être assignées dès qu'un host NixOS LAN compatible existera dans `topology.nix` (par exemple un futur `mac-mini-nixos` ou un autre nom non ambigu).
+Cas reels :
 
-Cette séparation évite deux erreurs :
+- `home/targets/ms-s1-max.nix` : user `mfo`, Hyprland, Noctalia
+- `home/targets/contabo.nix` : vide, intentionnel
 
-1. instancier des stacks sur un host qui n'existe pas (cassait `validate-inventory`) ;
-2. inventer un host NixOS fictif pour faire passer la validation.
+## Deployments
 
-## Parcours d'installation NixOS
+`deployments/validation.nix` impose :
 
-- `main`, `laptop`, `gaming` et `openclaw-vm` ont maintenant un `disko.nix` branché
-- leur parcours NixOS Anywhere est donc préparé structurellement
-- le dernier paramètre volontairement local reste `disk` dans `vars.nix`, à renseigner sur la machine cible
-- `ms-s1-max` reste sur un parcours manuel tant qu'aucun `disko.nix` n'est défini pour ce host
+- target existant
+- stack existante
+- compatibilite `supportedTargets`
+- respect des modes `singleton` / `perTarget`
 
-Le même principe vaut pour une VM :
-- le workflow NixOS Anywhere ou manuel reste celui du host concret
-- le profil VM ne remplace pas la nécessité de renseigner le bon disque
-- le choix firmware/réseau/hyperviseur reste un choix du target concret
-
-## OpenClaw : séparation des responsabilités
-
-- `openclaw-vm` = la machine concrète
-- `virtual-machine.nix` = le contexte VM réutilisable
-- `stacks/openclaw/` = l’adaptateur local du repo
-- `nix-openclaw` = le packaging et le module officiels upstream
-
-La machine décide qu'elle porte la stack.
-La stack ne devient pas un host.
-
-Le rôle de `stacks/openclaw/default.nix` est volontairement mince :
-- importer le bon module upstream
-- mapper l’interface locale `infra.stacks.openclaw.*`
-- préparer port, config, données, logs, `public.env`
-- générer le secret minimal de bootstrap nécessaire au gateway auth
-- garder un point d’entrée `sops-nix` pour des secrets externes réels quand ils existent
-- éviter toute réimplémentation maison d’OpenClaw
+Le runtime d'un target ne devient jamais la source de verite.
+Le repo reste la source de verite.

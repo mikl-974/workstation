@@ -35,7 +35,7 @@ Notes :
   - pour installer sur un autre disque depuis un NixOS existant, utiliser
     directement : install-from-existing <host>
   - les arguments supplémentaires sont passés au script cible
-    ex. : nix run .#install-manual -- homelab --mode test
+    ex. : nix run .#install-manual -- ms-s1-max --mode test
 EOF
       exit 0
       ;;

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# post-install-check.sh — Vérification post-installation workstation
+# post-install-check.sh — Vérification post-installation infra
 
 set -euo pipefail
 
@@ -105,7 +105,7 @@ check_dotfile() {
 }
 
 echo ""
-echo -e "${BLD}=== Vérifications post-installation workstation ===${RST}"
+echo -e "${BLD}=== Vérifications post-installation infra ===${RST}"
 echo ""
 
 echo -e "${BLD}── Système NixOS${RST}"
@@ -239,63 +239,24 @@ else
 fi
 if [[ "$EXPECT_DESKTOP" == true ]]; then
   check_service "warp-svc" "Cloudflare WARP"
+  check_service "pipewire" "PipeWire"
+  check_service "pipewire-pulse" "PipeWire Pulse"
+  check_service "wireplumber" "WirePlumber"
+else
+  warn "Profil desktop non détecté — checks audio/desktop ignorés"
 fi
 
-check_service "pipewire" "PipeWire"
-check_service "pipewire-pulse" "PipeWire Pulse"
-check_service "wireplumber" "WirePlumber"
-
-if [[ "$HOST_CONTEXT_AVAILABLE" == true ]] && grep -Rhoq 'stacks/openclaw/default\.nix' "$REPO_ROOT/targets/hosts/$HOST_NAME"; then
+if [[ "$HOST_CONTEXT_AVAILABLE" == true ]] && grep -Rqs 'services\.ollama' "$REPO_ROOT/targets/hosts/$HOST_NAME"; then
   echo ""
-  echo -e "${BLD}── OpenClaw${RST}"
+  echo -e "${BLD}── IA locale${RST}"
   echo ""
-  check_service "openclaw-gateway" "OpenClaw gateway"
+  check_service "ollama" "Ollama"
+  check_binary "ollama" "CLI Ollama"
+  check_binary "llama-cli" "CLI llama.cpp"
 
-  if [[ -f /etc/openclaw/openclaw.json ]]; then
-    ok "/etc/openclaw/openclaw.json présent"
-    if grep -Eq '"bind"[[:space:]]*:[[:space:]]*"tailnet"' /etc/openclaw/openclaw.json; then
-      ok "OpenClaw configuré en bind tailnet"
-    else
-      warn "bind tailnet non détecté dans /etc/openclaw/openclaw.json"
-    fi
-  else
-    fail "/etc/openclaw/openclaw.json absent"
-  fi
-
-  if [[ -f /etc/openclaw/public.env ]]; then
-    ok "/etc/openclaw/public.env présent"
-  else
-    fail "/etc/openclaw/public.env absent"
-  fi
-
-  for path in /var/lib/openclaw /var/log/openclaw /var/lib/openclaw/secrets; do
-    if [[ -d "$path" ]]; then
-      ok "$path présent"
-    else
-      fail "$path absent"
-    fi
-  done
-
-  if [[ -f /var/lib/openclaw/secrets/gateway-token.env ]]; then
-    if grep -q '^OPENCLAW_GATEWAY_TOKEN=' /var/lib/openclaw/secrets/gateway-token.env; then
-      ok "Secret runtime OpenClaw présent : gateway token"
-    else
-      fail "gateway-token.env présent mais invalide"
-    fi
-  else
-    fail "/var/lib/openclaw/secrets/gateway-token.env absent"
-  fi
-
-  if [[ -f /run/secrets/openclaw/env ]]; then
-    ok "Secret env externe OpenClaw présent : /run/secrets/openclaw/env"
-  else
-    warn "Aucun secret env externe OpenClaw détecté — le boot minimal reste valide, mais Telegram/providers ne sont pas encore branchés"
-  fi
-
-  if [[ -f /var/log/openclaw/gateway.log ]]; then
-    ok "/var/log/openclaw/gateway.log présent"
-  else
-    warn "/var/log/openclaw/gateway.log absent pour le moment"
+  if grep -Rqs 'rocm' "$REPO_ROOT/targets/hosts/$HOST_NAME"; then
+    check_binary "rocminfo" "CLI ROCm rocminfo"
+    check_binary "rocm-smi" "CLI ROCm rocm-smi"
   fi
 fi
 

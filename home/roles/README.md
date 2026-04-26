@@ -1,15 +1,12 @@
 # home/roles/
 
-Rôles Home Manager réellement utilisés.
-
-## Rôles actuels
+Roles Home Manager encore actifs :
 
 - `desktop-hyprland.nix`
-- `desktop-gnome.nix`
-- `gaming-steam.nix`
-- `gaming-lutris.nix`
-- `browser-chromium.nix`
-- `browser-firefox.nix`
-- `terminal-kitty.nix`
+- `noctalia.nix`
 
-Ces rôles sont composés depuis `home/targets/`.
+La logique de packages lourds ou de capacites machine ne vit plus ici.
+Elle vit soit :
+
+- dans `targets/hosts/<host>/config/` pour une machine locale
+- dans `stacks/` + `deployments/` pour un service deployable

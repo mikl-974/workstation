@@ -1,5 +1,4 @@
-# Hardened sudo baseline for server-class hosts (vendored from the previous
-# `homelab` repo `nix/modules/security/`).
+# Hardened sudo baseline for server-class hosts.
 #
 # Activated via `infra.security.server.enable` rather than imposed by import,
 # so that workstations with a different sudo policy are not silently affected.

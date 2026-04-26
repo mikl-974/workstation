@@ -8,7 +8,7 @@
 #   no real composition benefit, since no other repo consumed it.
 # - Vendoring keeps the contract identical (option shape unchanged) but moves
 #   the namespace under `infra.networking.*`, in line with the rest of the
-#   repo (`infra.security.sops`, `infra.stacks.openclaw`, ...).
+#   repo (`infra.security.sops`, `infra.users.*`, ...).
 { lib, config, ... }:
 let
   cfg = config.infra.networking.tailscale;

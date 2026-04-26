@@ -1,28 +1,26 @@
 # Classification des stacks
 
-Cette table fige le `deploymentMode` et les `supportedTargets` déclarés par chaque contrat `stacks/<stack>/stack.nix`, et donne le target recommandé pour chaque instance dans le contexte actuel du repo `infra`.
+Cette table reflete uniquement l'etat actuel du repo.
 
-Toute affectation décrite dans `deployments/inventory.nix` doit respecter cette table : `nix run .#validate-inventory` rejette tout placement incompatible.
+| Stack | deploymentMode | supportedTargets | Target actuel |
+|---|---|---|---|
+| `homepage` | singleton | `nixosHost` | `contabo` |
+| `beszel` | distributed | `nixosHost` | `contabo` |
+| `tsdproxy` | perTarget | `nixosHost` | `contabo` |
+| `kopia` | perTarget | `nixosHost` | `contabo` |
+| `nextcloud` | singleton | `nixosHost` | `contabo` |
+| `uptime-kuma` | singleton | `nixosHost`, `azureContainerApps`, `gcpCloudRun` | `azure-ext` |
+| `keycloak` | singleton | `nixosHost`, `azureContainerApps` | non assigne |
+| `immich` | singleton | `nixosHost` | non assigne |
+| `n8n` | singleton | `nixosHost` | non assigne |
+| `openwebui` | singleton | `nixosHost` | non assigne |
+| `opencode` | singleton | `nixosHost` | non assigne |
+| `pihole` | singleton | `nixosHost` | non assigne |
+| `rustdesk` | singleton | `nixosHost` | non assigne |
 
-| Stack | deploymentMode | supportedTargets | Target recommandé | Justification |
-|---|---|---|---|---|
-| `homepage` | singleton | nixosHost | `contabo` | portail central public |
-| `beszel` | distributed | nixosHost | hub `contabo`, agents par host à venir | modèle hub/agent natif |
-| `tsdproxy` | perTarget | nixosHost | `contabo` (et tout futur host headless) | exposition réseau locale par target |
-| `kopia` | perTarget | nixosHost | `contabo` (et tout futur host avec données) | sauvegarde par target |
-| `nextcloud` | singleton | nixosHost | `contabo` | usage limité à QTalk, sans hypothèse de full suite |
-| `keycloak` | singleton | nixosHost, azureContainerApps | `contabo` (initial) | IAM, à durcir avant migration cloud |
-| `rustdesk` | singleton | nixosHost | non assigné | accès distant stable, futur host server LAN |
-| `uptime-kuma` | singleton | nixosHost, azureContainerApps, gcpCloudRun | `azure-ext` | supervision externe plus résiliente |
-| `immich` | singleton | nixosHost | non assigné | stockage local et charges media — attendre un host LAN avec stockage |
-| `n8n` | singleton | nixosHost | non assigné | automation locale — attendre un host LAN |
-| `pihole` | singleton | nixosHost | non assigné | DNS local du LAN — attendre un host LAN dédié |
-| `openwebui` | singleton | nixosHost | non assigné | front AI — proximité usage quotidien |
-| `opencode` | singleton | nixosHost | non assigné | service interne |
-| `ai-server` | singleton | nixosHost | `ms-s1-max` | service `ollama` natif `infra` consommé directement par le host via `modules/profiles/ai-server.nix` |
-| `openclaw` | singleton | nixosHost | `openclaw-vm` | gateway opérée comme stack `infra` native |
+## Hors modele stack
 
-## Points d'attention
+L'IA locale de `ms-s1-max` est hors inventory.
+Elle est decrite directement dans :
 
-- Les stacks marquées « non assigné » ont un contrat valide mais aucune ligne dans `inventory.nix` aujourd'hui. Elles sont prêtes à recevoir un placement quand un host compatible existera dans `topology.nix`.
-- L'hôte historique `mac-mini` du repo `homelab` (kind `nixosHost`) **n'existe pas** dans `infra` aujourd'hui : le seul `mac-mini` du repo est un Darwin (cf. `docs/architecture.md` § "Conflit de nom `mac-mini`"). Tant que ce conflit n'est pas tranché, les stacks à vocation LAN restent non assignées plutôt que d'être collées à un host inexistant.
+- `targets/hosts/ms-s1-max/config/capabilities.nix`

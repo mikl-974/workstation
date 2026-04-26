@@ -1,5 +1,0 @@
-# Empty Home Manager composition for the `sandbox` VM.
-#
-# The operator account (`admin`) is provisioned by modules/users/admin.nix at
-# the system level. No desktop/user-space composition is needed on this VM.
-{ }

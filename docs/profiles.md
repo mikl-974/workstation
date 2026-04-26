@@ -1,84 +1,64 @@
 # Profils
 
-## Rôle des profils
+## Principe
 
-Un profil assemble des briques reutilisables pour un usage donne.
+Un profil reste une brique de composition reutilisable.
+Il ne doit pas cacher la cartographie logicielle d'un host quand cette
+cartographie doit rester evidente.
 
-Le profil :
+## Profils encore utiles
 
-- n'est pas un host
-- n'est pas un module technique bas niveau
-- n'est pas un dotfile
+### `modules/profiles/workstation-common.nix`
 
-Il sert de point d'entree lisible pour les hosts.
+Base commune pour une workstation NixOS :
 
-## Regle de composition
+- desktop Hyprland
+- SSH
+- reseau
+- theming
+- boot EFI
 
-Ordre logique :
+### `modules/profiles/server.nix`
 
-1. `modules/apps/` -> paquets
-2. `modules/roles/` -> composition d'un usage (gaming, ai)
-3. `modules/profiles/` -> point d'entree simple pour les targets
-4. `targets/` -> machine concrete
+Base commune pour un serveur NixOS :
 
-## Profils existants
+- SSH
+- firewall
+- Tailscale
+- user admin
 
-| Profil | Rôle |
-|---|---|
-| `modules/profiles/desktop-hyprland.nix` | base desktop commune |
-| `modules/profiles/dev.nix` | environnement dev utilisateur + containers locaux |
-| `modules/profiles/gaming.nix` | role gaming |
-| `modules/profiles/ai.nix` | role AI local |
-| `modules/profiles/networking.nix` | briques reseau partagees via `modules/networking/` (Tailscale local) |
+### `modules/profiles/gaming.nix`
 
-## Profil `desktop-hyprland`
+Profil optionnel de bundle.
 
-Ce profil assemble la base workstation desktop :
+Il a du sens uniquement parce qu'un setup gaming est souvent consomme comme
+un tout coherent.
 
-- `modules/desktop/default.nix`
-- `modules/apps/default.nix`
-- `modules/shell/default.nix`
-- `modules/theming/default.nix`
+Mais le bundle ne remplace pas les briques atomiques :
 
-Effets notables :
+- `modules/apps/lutris.nix`
+- `modules/apps/steam.nix`
+- `modules/apps/gaming.nix`
 
-- Hyprland
-- audio desktop
-- daily apps (`modules/apps/daily.nix`)
-- connectivite locale (`modules/desktop/connectivity.nix`)
-- utilitaires desktop (`modules/apps/utilities.nix`)
-- WARP
-- Noctalia
+## Decision de recentrage
 
-## Profil `dev`
+Les profils trop vagues ou sans usage reel ont ete retires :
 
-Ce profil assemble la couche developpeur locale :
+- pas de profil GNOME
+- pas de profil VM
+- pas de profil IA generique
 
-- `modules/apps/editors.nix`
-- `modules/apps/dev.nix`
-- `modules/containers/podman.nix`
+La logique veut maintenant que :
 
-Effets notables :
+- une app seule reste installable seule quand c'est utile
+- un bundle existe quand plusieurs apps forment un lot coherent
+- le profil exprime une base reutilisable
+- le host exprime ses capacites concretes
 
-- VS Code, Rider, WebStorm
-- Neovim
-- GitKraken
-- outils CLI de base (`git`, `curl`, `jq`)
-- Podman local avec compatibilite CLI/socket Docker pour l'usage dev
+Exemple :
 
-## Pourquoi pas un profil `utilities`
-
-Les utilities demandees ici sont de la base desktop quotidienne.
-
-Creer un profil `utilities` separe ajouterait une couche artificielle sans gain :
-
-- tous les hosts desktop en ont besoin
-- elles ne representent pas un usage specialise comme `gaming` ou `ai`
-- elles sont deja composees proprement dans la base desktop
-
-Le bon niveau est donc :
-
-- apps quotidiennes -> `modules/apps/daily.nix`
-- paquets -> `modules/apps/utilities.nix`
-- systeme desktop -> `modules/desktop/connectivity.nix`
-- activation -> `modules/profiles/desktop-hyprland.nix`
+- `ms-s1-max` importe `workstation-common`
+- `ms-s1-max` declare ses outils IA/dev dans `config/capabilities.nix`
+- ces outils peuvent venir de bundles reutilisables comme `modules/apps/dev-workstation.nix` ou `modules/apps/ai-local.nix`
+- un futur host gaming pourrait importer `modules/profiles/gaming.nix`
+- un host non gaming pourrait n'importer que `modules/apps/lutris.nix`

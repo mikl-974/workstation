@@ -1,8 +1,7 @@
 # Disk layout for `contabo` — Contabo VPS root disk (typically /dev/vda).
 #
-# Vendored from the previous `homelab` `nix/hosts/contabo/disko.nix`, with the
-# device read from `targets/hosts/contabo/vars.nix` (field `disk`) so the same
-# layout can be reused if the VPS image changes hardware presentation.
+# The device is read from `targets/hosts/contabo/vars.nix` (field `disk`) so
+# the same layout can be reused if the VPS image changes hardware presentation.
 { hostVars, ... }:
 {
   disko.devices = {

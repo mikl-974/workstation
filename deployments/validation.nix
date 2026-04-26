@@ -2,8 +2,7 @@
 # the declared topology (`./topology.nix`) and the placement inventory
 # (`./inventory.nix`).
 #
-# Vendored from the previous `homelab` repo. The logic is generic and depends
-# only on local files in this repo — no external flake input is required.
+# The logic is generic and depends only on local files in this repo.
 let
   topology = import ./topology.nix;
   inventory = import ./inventory.nix;

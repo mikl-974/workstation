@@ -1,6 +1,6 @@
-# Common NixOS workstation baseline shared by main, laptop, and gaming.
-# Import this profile first, then layer host-specific profiles (dev, gaming…)
-# and the host-local user.nix on top.
+# Common NixOS workstation baseline.
+# Import this profile, then layer host-local responsibilities on top
+# inside `targets/hosts/<name>/config/`.
 { hostVars, ... }:
 {
   imports = [

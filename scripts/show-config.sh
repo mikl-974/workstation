@@ -133,24 +133,6 @@ if [[ -d "$HOST_DIR" ]]; then
   echo ""
 fi
 
-if grep -Rhoq 'stacks/openclaw/default\.nix' "$HOST_DIR"; then
-  echo -e "${BLD}── OpenClaw${RST}"
-  echo ""
-  show_field "runtime"   "minimal deployable"
-  show_field "exposure"  "tailnet-only"
-  show_field "public env" "/etc/openclaw/public.env"
-  show_field "config"    "/etc/openclaw/openclaw.json"
-  show_field "state"     "/var/lib/openclaw"
-  show_field "logs"      "/var/log/openclaw/gateway.log"
-  show_field "token"     "/var/lib/openclaw/secrets/gateway-token.env (généré au premier start)"
-  if [[ -f "$REPO_ROOT/secrets/stacks/openclaw.yaml" ]]; then
-    show_field "sops env" "secrets/stacks/openclaw.yaml"
-  else
-    printf "  %-12s %s\n" "sops env" "$(echo -e "${DIM}(absent)${RST}  ← provider / Telegram encore hors scope pour cette passe")"
-  fi
-  echo ""
-fi
-
 echo -e "${BLD}── Statut${RST}"
 echo ""
 UNDEFINED=0

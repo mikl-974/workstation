@@ -2,8 +2,8 @@
 # install-from-existing.sh — Installation NixOS depuis un NixOS déjà installé,
 # vers un *autre* disque que celui qui porte / sur le système courant.
 #
-# Cas d'usage : réinstaller `gaming` sur /dev/nvme1n1 depuis `main` qui boot
-# sur /dev/nvme0n1, sans clé USB.
+# Cas d'usage : réinstaller `contabo` sur un autre disque depuis un NixOS déjà
+# booté, sans passer par une clé USB.
 #
 # Garde-fou : refuse explicitement si le disque cible est celui qui porte /.
 #

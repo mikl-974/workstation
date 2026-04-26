@@ -1,8 +1,7 @@
 # OpenSSH hardening module (vendored from the previous `foundation` flake).
 #
 # Provides `infra.security.ssh.*` for hosts that want a hardened SSH baseline.
-# Workstations that already configure `services.openssh` directly (e.g.
-# `targets/hosts/openclaw-vm`) can keep doing so; this module is opt-in.
+# This module is opt-in so each host keeps control of its SSH posture.
 { lib, config, ... }:
 let
   cfg = config.infra.security.ssh;

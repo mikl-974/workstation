@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# validate-install.sh — Validateur pré-installation workstation
+# validate-install.sh — Validateur pré-installation infra
 #
 # Vérifie qu'un host est réellement prêt avant installation.
 
@@ -248,35 +248,6 @@ done < <(grep -RhoE 'stacks/[^[:space:]]+/default\.nix' "$HOST_DIR" \
 
 if [[ $HOST_STACKS -eq 0 ]]; then
   ok "aucune stack importée explicitement par ce host"
-fi
-
-if grep -Rhoq 'stacks/openclaw/default\.nix' "$HOST_DIR"; then
-  echo ""
-  echo -e "${BLD}── Readiness OpenClaw minimale${RST}"
-
-  if [[ -f "$REPO_ROOT/stacks/openclaw/env/public.env" ]]; then
-    ok "OpenClaw : stacks/openclaw/env/public.env présent"
-  else
-    fail "OpenClaw : stacks/openclaw/env/public.env manquant"
-  fi
-
-  if grep -q 'bind = "tailnet"' "$DEFAULT_FILE" || grep -q 'default = "tailnet"' "$REPO_ROOT/stacks/openclaw/default.nix"; then
-    ok "OpenClaw : exposition prudente retenue (tailnet-only)"
-  else
-    fail "OpenClaw : aucune posture réseau prudente explicite détectée"
-  fi
-
-  if grep -q 'OPENCLAW_GATEWAY_TOKEN' "$REPO_ROOT/stacks/openclaw/default.nix"; then
-    ok "OpenClaw : secret d'auth gateway réellement consommé au runtime"
-  else
-    fail "OpenClaw : aucun flux réel de secret gateway détecté"
-  fi
-
-  if [[ -f "$REPO_ROOT/secrets/stacks/openclaw.yaml" ]]; then
-    ok "OpenClaw : secret env externe versionné dans secrets/stacks/openclaw.yaml"
-  else
-    warn "OpenClaw : aucun secret env externe versionné — le service minimal peut démarrer, mais Telegram/providers restent volontairement non branchés"
-  fi
 fi
 
 echo ""

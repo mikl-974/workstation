@@ -6,74 +6,19 @@
 # - a cloud target provisioned via OpenTofu (`kind = "azureContainerApps"`,
 #   `gcpCloudRun`, `cloudflareContainers`).
 #
-# `main`, `laptop` and `gaming` are listed but currently host no stack:
-# they remain pure NixOS workstations. They are kept in the topology so
-# the validation can also detect mistakes in their inventory entries.
+# The repo is intentionally centered on three concrete hosts only:
+# - `mac-mini`   : Darwin workstation
+# - `ms-s1-max`  : main NixOS workstation with local AI/dev tooling
+# - `contabo`    : server-class VPS operated via Dokploy
 #
-# `ms-s1-max` is a workstation that additionally hosts the local AI server
-# stack (`ai-server`). `openclaw-vm` is a service VM hosting the `openclaw`
-# gateway. `contabo` is a server-class VPS operated via Dokploy.
-#
-# `mac-mini` is the Darwin workstation managed via nix-darwin. It currently
-# hosts no stack but is modeled here for completeness and future assignments.
-#
-# `homelab` is a local KVM VM dedicated to self-hosted services.
-# `sandbox` is a local KVM VM for testing apps before deployment.
+# Cloud targets remain modeled separately because they are part of the
+# deployment inventory, but they are not workstation/host entries.
 {
   targets = {
-    main = {
-      kind    = "nixosHost";
-      runtime = "nixos-systemd";
-      address = "main";
-      region  = "home-lan";
-    };
-
-    laptop = {
-      kind    = "nixosHost";
-      runtime = "nixos-systemd";
-      address = "laptop";
-      region  = "home-lan";
-    };
-
-    gaming = {
-      kind    = "nixosHost";
-      runtime = "nixos-systemd";
-      address = "gaming";
-      region  = "home-lan";
-    };
-
     ms-s1-max = {
       kind    = "nixosHost";
       runtime = "nixos-systemd";
       address = "ms-s1-max";
-      region  = "home-lan";
-    };
-
-    openclaw-vm = {
-      kind    = "nixosHost";
-      runtime = "nixos-systemd";
-      address = "openclaw-vm";
-      region  = "home-lan";
-    };
-
-    homelab = {
-      kind    = "nixosHost";
-      runtime = "nixos-systemd";
-      address = "homelab";
-      region  = "home-lan";
-    };
-
-    sandbox = {
-      kind    = "nixosHost";
-      runtime = "nixos-systemd";
-      address = "sandbox";
-      region  = "home-lan";
-    };
-
-    orbstack = {
-      kind    = "nixosHost";
-      runtime = "nixos-systemd";
-      address = "orbstack";
       region  = "home-lan";
     };
 

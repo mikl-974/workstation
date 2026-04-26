@@ -1,5 +1,4 @@
-# Dokploy host preparation module (vendored from the previous `homelab`
-# `nix/modules/dokploy/`).
+# Dokploy host preparation module.
 #
 # Dokploy itself is *not* installed by Nix — it is operated externally and
 # orchestrates Docker workloads. This module only prepares the host the way
@@ -10,6 +9,11 @@ let
   cfg = config.infra.dokploy;
 in
 {
+  imports = [
+    ../containers/docker.nix
+    ../containers/server.nix
+  ];
+
   options.infra.dokploy = {
     enable = lib.mkEnableOption "Dokploy host preparation (Docker + 80/443 + groups)";
 

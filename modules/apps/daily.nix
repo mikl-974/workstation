@@ -11,9 +11,8 @@
   # Out of scope:
   #   - technical/system helpers -> modules/apps/utilities.nix
   #   - desktop/system integration -> modules/desktop/
-  #   - editors and IDEs -> modules/apps/editors.nix
-  #   - gaming -> modules/apps/gaming.nix
-  #   - local AI apps -> modules/apps/ai.nix
+  #   - editors and IDEs -> host-local capability maps when needed
+  #   - specialized AI/dev tooling -> host-local capability maps
   environment.systemPackages = with pkgs; [
     # Web browser
     firefox

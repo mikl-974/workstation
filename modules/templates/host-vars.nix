@@ -21,7 +21,7 @@
 
   # Nom d'utilisateur système.
   # Doit être un identifiant Unix valide (lettres minuscules, chiffres, tirets).
-  # Exemple : "alice", "bob", "mikl"
+  # Exemple : "alice", "bob", "mfo"
   username = "DEFINE_USERNAME";
 
   # Hostname de la machine.

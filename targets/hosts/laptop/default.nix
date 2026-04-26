@@ -1,4 +1,0 @@
-{ ... }:
-{
-  imports = [ ./config/default.nix ];
-}

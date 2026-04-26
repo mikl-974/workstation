@@ -1,5 +1,4 @@
-# Server-side firewall baseline (vendored from the previous `homelab`
-# `nix/modules/networking/`).
+# Server-side firewall baseline.
 #
 # - Enables the firewall;
 # - opens SSH (22/tcp) so the host stays reachable;

@@ -1,44 +1,54 @@
 # modules/
 
-Briques Nix réutilisables composées dans les targets et profils.
+Briques Nix reutilisables du repo.
 
-## Règle
+## Dossiers principaux
 
-Ce dossier contient uniquement :
-- modules NixOS réutilisables
-- modules Darwin réutilisables
-- profils réutilisables
-- devshells
-- templates
-- helpers et lib
+- `modules/apps/` : petits lots de paquets reutilisables
+- `modules/containers/` : moteurs de containers locaux
+- `modules/darwin/` : base Darwin
+- `modules/desktop/` : base desktop NixOS
+- `modules/devshells/` : environnements de dev CLI
+- `modules/dokploy/` : preparation serveur Dokploy
+- `modules/networking/` : reseau reutilisable
+- `modules/profiles/` : profils publics importes par les hosts
+- `modules/security/` : securite reutilisable
+- `modules/shell/` : shell systeme
+- `modules/theming/` : theming
+- `modules/users/` : users systeme
 
-Il ne contient jamais :
-- de machine concrète
-- de stack applicative
-- de logique d'installation spécifique à une machine
+## Profils actifs
 
-## Structure
+- `workstation-common.nix`
+- `server.nix`
+- `gaming.nix`
 
-| Dossier | Rôle |
-|---|---|
-| `modules/apps/` | Paquets et applications desktop |
-| `modules/containers/` | Moteurs de containers locaux |
-| `modules/darwin/` | Base et intégrations Darwin (`nix-darwin`, `nix-homebrew`) |
-| `modules/desktop/` | Base système desktop (Hyprland, audio, connectivité) |
-| `modules/devshells/` | Environnements de développement CLI |
-| `modules/dokploy/` | Activation Docker + ports nécessaires à Dokploy (consommé par `targets/hosts/contabo/`) |
-| `modules/networking/` | Briques réseau réutilisables (`tailscale`, `firewall-server`) |
-| `modules/profiles/` | **Portes d'entrée publiques** importées par les targets (`virtual-machine`, `server`, `desktop-hyprland`, `gaming`, `ai`, …) |
-| `modules/roles/` | **Compositions internes** d'un usage fonctionnel (`gaming`, `ai`) — réutilisées par les profils correspondants ; jamais importées directement par un target |
-| `modules/security/` | Intégrations sécurité réutilisables (`sops-nix`, `ssh`, `server`) |
-| `modules/shell/` | Configuration shell système |
-| `modules/templates/` | Templates de configuration (ex. `host-vars.nix`) |
-| `modules/theming/` | Theming et identité visuelle |
-| `modules/users/` | Modules user système (ex. `admin` pour les server-class) |
+Le reste de la cartographie logicielle doit rester visible dans les hosts.
+Exemple :
 
-## Convention `profiles/` vs `roles/`
+- `targets/hosts/ms-s1-max/config/capabilities.nix`
 
-- Un **profile** est la porte d'entrée que les `targets/hosts/<host>/` importent. Il assemble plusieurs modules cohérents et expose une API stable.
-- Un **role** est une composition interne réutilisée par les profils. Il ne doit **pas** être importé directement par un target — l'importation passe toujours par un profile.
+## Regle de composition
 
-Exemple : `modules/profiles/gaming.nix` est un wrapper d'une ligne autour de `modules/roles/gaming.nix`. Le wrapper existe pour stabiliser l'API publique : si demain `gaming.nix` doit composer plusieurs roles ou ajouter une option, le contrat des hosts qui l'importent ne change pas.
+Le repo retient maintenant cette hierarchie :
+
+- `modules/apps/<app>.nix` : app ou capacite atomique
+- `modules/apps/<bundle>.nix` : bundle applicatif compose de plusieurs apps
+- `modules/profiles/<profile>.nix` : profil reutilisable quand le bundle a un vrai sens de composition
+
+Exemple retenu :
+
+- `modules/apps/lutris.nix` : installer Lutris seul
+- `modules/apps/steam.nix` : installer Steam seul
+- `modules/apps/gaming.nix` : pack gaming compose
+- `modules/profiles/gaming.nix` : point d'entree reutilisable si un host veut le bundle complet
+- `modules/apps/rider.nix` : installer Rider seul
+- `modules/apps/webstorm.nix` : installer WebStorm seul
+- `modules/apps/dev-workstation.nix` : bundle dev de workstation
+- `modules/apps/ai-local.nix` : bundle IA locale
+
+Donc :
+
+- une app peut rester installable independamment
+- un profil n'existe que quand "tout ou rien" a un vrai sens operatoire
+- un host peut importer un bundle tout en gardant sa carte logicielle visible

@@ -85,6 +85,45 @@ check_service() {
   fi
 }
 
+check_user_service() {
+  local user="$1"
+  local svc="$2"
+  local label="$3"
+  local uid=""
+  local unit_file_state=""
+  local triggered_by=""
+  local -a userctl=()
+
+  if ! id "$user" &>/dev/null 2>&1; then
+    fail "$label ($svc) — utilisateur introuvable : $user"
+    return
+  fi
+
+  uid="$(id -u "$user")"
+  if [[ "$(id -un)" == "$user" ]]; then
+    userctl=(systemctl --user)
+  elif [[ "$(id -u)" -eq 0 ]]; then
+    userctl=(sudo -u "$user" env XDG_RUNTIME_DIR="/run/user/$uid" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus" systemctl --user)
+  else
+    warn "$label ($svc) — vérification user impossible hors session de $user"
+    return
+  fi
+
+  if "${userctl[@]}" is-active "$svc" &>/dev/null 2>&1; then
+    ok "$label ($svc) — actif"
+  elif "${userctl[@]}" is-enabled "$svc" &>/dev/null 2>&1; then
+    warn "$label ($svc) — activé mais pas actif"
+  else
+    unit_file_state="$("${userctl[@]}" show -p UnitFileState --value "$svc" 2>/dev/null || true)"
+    triggered_by="$("${userctl[@]}" show -p TriggeredBy --value "$svc" 2>/dev/null || true)"
+    if [[ -n "$triggered_by" && ( "$unit_file_state" == "linked-runtime" || "$unit_file_state" == "linked" || "$unit_file_state" == "static" ) ]]; then
+      warn "$label ($svc) — activable à la demande via $triggered_by"
+    else
+      fail "$label ($svc) — inactif ou absent"
+    fi
+  fi
+}
+
 check_dotfile() {
   local home_dir="$1"
   local destination="$2"
@@ -196,6 +235,7 @@ if [[ "$EXPECT_DESKTOP" == true ]]; then
   check_binary "wofi" "Launcher wofi"
   check_binary "mako" "Notifications mako"
   check_binary "cliphist" "Clipboard history"
+  check_binary "noctalia-shell" "Noctalia Shell"
   if command -v chromium &>/dev/null || command -v firefox &>/dev/null; then
     ok "Navigateur web disponible (chromium ou firefox)"
   else
@@ -210,10 +250,16 @@ if [[ "$EXPECT_DESKTOP" == true ]]; then
   fi
 
   if [[ "${XDG_CURRENT_DESKTOP:-}" == "Hyprland" || "${XDG_SESSION_DESKTOP:-}" == "Hyprland" ]]; then
-    if pgrep -x mako >/dev/null 2>&1; then
+    if pgrep -af 'mako' >/dev/null 2>&1; then
       ok "mako lancé dans la session"
     else
       warn "mako non détecté dans la session Hyprland courante"
+    fi
+
+    if pgrep -af 'noctalia-shell|quickshell' >/dev/null 2>&1; then
+      ok "Noctalia Shell lancé dans la session"
+    else
+      warn "Noctalia Shell non détecté dans la session Hyprland courante"
     fi
 
     if pgrep -af 'cliphist store' >/dev/null 2>&1; then
@@ -239,9 +285,9 @@ else
 fi
 if [[ "$EXPECT_DESKTOP" == true ]]; then
   check_service "warp-svc" "Cloudflare WARP"
-  check_service "pipewire" "PipeWire"
-  check_service "pipewire-pulse" "PipeWire Pulse"
-  check_service "wireplumber" "WirePlumber"
+  check_user_service "$EXPECTED_USER" "pipewire.service" "PipeWire"
+  check_user_service "$EXPECTED_USER" "pipewire-pulse.service" "PipeWire Pulse"
+  check_user_service "$EXPECTED_USER" "wireplumber.service" "WirePlumber"
 else
   warn "Profil desktop non détecté — checks audio/desktop ignorés"
 fi
@@ -266,7 +312,7 @@ echo ""
 if command -v nix &>/dev/null; then
   ok "nix disponible"
   if [[ -n "$REPO_ROOT" && -f "$REPO_ROOT/flake.nix" ]]; then
-    if (cd "$REPO_ROOT" && nix develop .#dotnet --command dotnet --version >/dev/null); then
+    if (cd "$REPO_ROOT" && nix --extra-experimental-features 'nix-command flakes' develop .#dotnet --command dotnet --version >/dev/null); then
       ok "devShell .NET accessible via nix develop .#dotnet"
     else
       warn "Impossible de confirmer le devShell .NET depuis le repo courant"

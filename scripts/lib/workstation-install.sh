@@ -66,9 +66,13 @@ host_has_profile() {
   local repo_root="$1"
   local host="$2"
   local profile="$3"
-  local host_dir="$repo_root/targets/hosts/$host"
+  local expected_path="$repo_root/modules/profiles/${profile}.nix"
 
-  [[ -d "$host_dir" ]] && grep -R -q "modules/profiles/${profile}.nix" "$host_dir"
+  while IFS= read -r nix_file; do
+    [[ "$nix_file" == "$expected_path" ]] && return 0
+  done < <(list_host_nix_files "$repo_root" "$host")
+
+  return 1
 }
 
 host_is_virtual_machine() {
@@ -154,7 +158,7 @@ collect_imported_nix_paths() {
     return 0
   fi
 
-  grep -oE '(\.\.?/[^[:space:];]+\.nix)' "$nix_file" || true
+  sed 's/#.*$//' "$nix_file" | grep -oE '(\.\.?/[^[:space:];]+\.nix)' || true
 }
 
 collect_target_user_imports() {
@@ -178,6 +182,38 @@ collect_target_user_imports() {
 }
 
 declare -gA __home_nix_visited=()
+declare -gA __nix_tree_visited=()
+
+_collect_nix_tree_recursive() {
+  local entry="$1"
+  local resolved
+  resolved="$(realpath "$entry")"
+
+  [[ -f "$resolved" ]] || return 0
+  if [[ -n "${__nix_tree_visited[$resolved]:-}" ]]; then
+    return 0
+  fi
+  __nix_tree_visited["$resolved"]=1
+
+  while IFS= read -r rel_import; do
+    [[ -z "$rel_import" ]] && continue
+    _collect_nix_tree_recursive "$(dirname "$resolved")/$rel_import"
+  done < <(collect_imported_nix_paths "$resolved")
+
+  printf '%s\n' "$resolved"
+}
+
+list_host_nix_files() {
+  local repo_root="$1"
+  local host="$2"
+  local default_file
+  default_file="$(host_default_file "$repo_root" "$host")"
+
+  __nix_tree_visited=()
+  if [[ -f "$default_file" ]]; then
+    _collect_nix_tree_recursive "$default_file"
+  fi
+}
 
 _collect_home_nix_tree_recursive() {
   local entry="$1"

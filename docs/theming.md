@@ -46,8 +46,8 @@ Cache binaire configuré dans `nixConfig` du flake.
 
 ## Intégration Hyprland
 
-- `exec-once = noctalia-shell` dans `dotfiles/hypr/hyprland.conf`
-- `bind = $mod, Space, exec, noctalia-shell ipc call launcher toggle`
+- `exec-once = noctalia-shell` dans `dotfiles/hyprland/hyprland.conf`
+- la session Hyprland lance Noctalia au login ; les bindings launcher restent gérés dans `dotfiles/hyprland/profiles/*.conf`
 
 ## Qt software rendering
 

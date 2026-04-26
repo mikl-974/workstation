@@ -43,6 +43,7 @@ La base inclut :
 - outils Wayland minimaux (`waybar`, `wl-clipboard`, `grim`, `slurp`)
 - utilitaires desktop (`pavucontrol`, `brightnessctl`, `playerctl`, `nm-connection-editor`)
 - dotfiles actifs pour Hyprland / foot / wofi / mako
+- autostart explicite de `noctalia-shell`
 - autostart explicite de `mako`
 - historique clipboard actif via `cliphist` + `wl-paste --watch`
 - bindings de base pour terminal, launcher, navigateur, fichiers et clipboard history
@@ -90,6 +91,7 @@ Les petits outils techniques desktop restent dans `modules/apps/utilities.nix`.
 La session Hyprland integre maintenant une base UX explicite et minimale :
 
 - `mako` demarre via `exec-once`
+- `noctalia-shell` demarre via `exec-once`
 - `cliphist` est alimente via deux watchers `wl-paste`
 - `SUPER+Return` ouvre `foot`
 - `SUPER+Space` ouvre `wofi`

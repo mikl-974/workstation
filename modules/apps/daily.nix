@@ -32,5 +32,6 @@
     cliphist
     localsend
     mako
+    wofi
   ];
 }

@@ -1,131 +1,143 @@
-# Theming — Noctalia
+# Noctalia Shell
 
-## Architecture
+## Position retenue
 
-Le theming repose sur **Noctalia Shell**, un shell desktop complet (barre, launcher, control center) basé sur Quickshell.
+Noctalia est un **desktop shell**, pas un simple theme.
 
-| Couche | Localisation | Rôle |
-|---|---|---|
-| Module système | `modules/theming/noctalia.nix` | Packages GTK/curseur, env vars, activation |
-| Module Home Manager | `home/roles/noctalia.nix` | Configuration Noctalia (barre, couleurs, widgets) via le module HM officiel |
-
-## Activation
-
-Noctalia est activé dans `profiles/desktop-hyprland.nix` :
-
-```nix
-workstation.theming.noctalia.enable = true;
-```
-
-Tous les hosts qui importent `desktop-hyprland.nix` héritent de Noctalia.
-
-## Module système (`modules/theming/noctalia.nix`)
-
-Installe le package `noctalia-shell` depuis le flake input, plus les packages GTK/curseur.
-Configure `GTK_THEME=Adwaita:dark`.
-
-## Module Home Manager (`home/roles/noctalia.nix`)
-
-Importe `inputs.noctalia.homeModules.default` et configure :
-- Position de la barre, type, widgets
-- Schéma de couleurs (prédéfini Rose Pine)
-- Paramètres de localisation
-
-La configuration est entièrement déclarative — pas de fichiers dotfiles manuels.
-
-## Flake input
-
-```nix
-noctalia = {
-  url = "github:noctalia-dev/noctalia-shell";
-  inputs.nixpkgs.follows = "nixpkgs-unstable";
-};
-```
-
-Cache binaire configuré dans `nixConfig` du flake.
-
-## Intégration Hyprland
-
-- `exec-once = noctalia-shell` dans `dotfiles/hyprland/hyprland.conf`
-- la session Hyprland lance Noctalia au login ; les bindings launcher restent gérés dans `dotfiles/hyprland/profiles/*.conf`
-
-## Qt software rendering
-
-Sur les machines sans accélération GPU :
-
-```nix
-QT_QUICK_BACKEND = "software";  # dans modules/desktop/hyprland.nix
-```
-
-## Modifier la configuration
-
-Éditer `home/roles/noctalia.nix` — section `programs.noctalia-shell.settings`.
-
-Documentation officielle : https://docs.noctalia.dev/
+Dans ce repo, l'integration correcte est :
 
 | Couche | Localisation | Role |
 |---|---|---|
-| Module systeme | `modules/theming/noctalia.nix` | packages GTK, env vars, activation |
-| Assets visuels | `dotfiles/themes/noctalia/` | couleurs, wallpapers, CSS applicatifs |
+| Activation workstation | `modules/profiles/desktop-hyprland.nix` | active l'integration Noctalia sur les postes Hyprland |
+| Integration systeme | `modules/theming/noctalia.nix` | dependances visuelles globales et variables de session |
+| Role Home Manager | `home/roles/noctalia.nix` | import du module Home Manager upstream + activation du shell |
+| Config Noctalia par user | `home/users/<user>.nix` + `dotfiles/noctalia/<user>/settings.json` | fichier JSON versionne par user et reference par Home Manager |
+| Overrides plugins par user | `dotfiles/noctalia/<user>/plugins*` | activation des plugins et correctifs locaux versionnes |
+| Lancement de la session | `dotfiles/hyprland/hyprland.conf` | `exec-once = uwsm app -- noctalia-shell` |
 
-Ces deux couches sont intentionnellement separees : le module Nix gere ce qui releve du systeme, les dotfiles gerent ce qui releve de la personnalisation visuelle brute.
+Cette separation suit la documentation officielle :
 
-## Activation
+- module Home Manager officiel pour la config utilisateur
+- lancement depuis la session Wayland
+- pas d'usage du service systemd Noctalia, upstream le marque comme deprecie
 
-Noctalia est active dans `modules/profiles/desktop-hyprland.nix` :
+Documentation upstream :
 
-```nix
-workstation.theming.noctalia.enable = true;
-```
+- https://docs.noctalia.dev/
+- https://docs.noctalia.dev/getting-started/nixos/
 
-Tous les hosts qui importent `desktop-hyprland.nix` heritent de Noctalia.
-Si un host ne doit pas avoir le theme, il ne doit pas importer ce profil.
+## Ce que fait le repo aujourd'hui
 
-## Module systeme (`modules/theming/noctalia.nix`)
+### `modules/theming/noctalia.nix`
 
-Ce module installe :
+Ce module ne porte **pas** la configuration du shell.
+
+Il garde uniquement :
+
 - `adwaita-icon-theme`
 - `gnome-themes-extra`
 - `bibata-cursors`
+- `GTK_THEME=Adwaita:dark`
 
-Et configure :
-- `GTK_THEME=Adwaita:dark` (variable de session — peut etre surchargee par home-manager)
+### `home/roles/noctalia.nix`
 
-## Dotfiles visuels (`dotfiles/themes/noctalia/`)
+Ce fichier ne porte plus les reglages du shell. Il :
 
-La palette de couleurs et les assets visuels vivent dans `dotfiles/themes/noctalia/`.
+1. importe `inputs.noctalia.homeModules.default`
+2. active `programs.noctalia-shell.enable = true`
 
-Structure prevue :
+### `home/users/mfo.nix` + `dotfiles/noctalia/mfo/settings.json`
 
+La configuration Noctalia effective est maintenant :
+
+1. stockee comme JSON versionne dans `dotfiles/noctalia/mfo/settings.json`
+2. referencee par `home/users/mfo.nix`
+3. rendue dans `~/.config/noctalia/settings.json` par Home Manager
+
+### Plugins Noctalia par user
+
+Les plugins actives pour `mfo` sont aussi rattaches a Home Manager :
+
+1. `dotfiles/noctalia/mfo/plugins.json` garde l'etat des plugins Noctalia
+2. `dotfiles/noctalia/mfo/plugins/...` contient les overrides locaux versionnes
+3. `home/users/mfo.nix` les rend dans `~/.config/noctalia/plugins/...`
+
+Cela permet de conserver dans le repo les petits correctifs locaux (par exemple
+les icones de plugins) sans remettre en cause l'architecture officielle de
+Noctalia.
+
+### `dotfiles/hyprland/hyprland.conf`
+
+Hyprland lance Noctalia explicitement :
+
+```conf
+exec-once = uwsm app -- noctalia-shell
 ```
-dotfiles/themes/noctalia/
-  colors.conf          palette de base (variables nommees)
-  wallpaper/           fonds d'ecran
-  gtk/                 surcharges CSS GTK
-  waybar/              style.css waybar
-  foot/                snippet couleurs foot (inclus dans foot.ini)
+
+Cela reste volontaire : upstream fournit un module NixOS `services.noctalia-shell`,
+mais son execution comme service systemd utilisateur est deprecie.
+
+Dans ce repo, on utilise le wrapper `noctalia-shell` fourni par le package Nix,
+car il embarque deja le runtime Quickshell et le `QS_CONFIG_PATH`. Le binaire
+`qs` n'est pas expose dans le PATH du systeme courant.
+
+Le login Hyprland passe aussi par `uwsm start hyprland.desktop` via `greetd`,
+ce qui correspond au demarrage recommande par Hyprland/NixOS pour une session
+Wayland correctement geree par systemd.
+
+## Modifier la configuration Noctalia
+
+Editer :
+
+```bash
+dotfiles/noctalia/mfo/settings.json
 ```
 
-Les fichiers de ce dossier sont lies par Home Manager (la composition Home Manager active (`home/targets/<host>.nix`)).
+Zone a modifier :
 
-## Etendre Noctalia
+```json
+{
+  "settingsVersion": 0,
+  "..."
+}
+```
 
-### Ajouter un package systeme
+Le raccord Home Manager reste dans :
 
-Dans `modules/theming/noctalia.nix`, section `environment.systemPackages`.
+```bash
+home/users/mfo.nix
+```
 
-### Ajouter un fichier de theme applicatif
+Les changements de barre, widgets, densite, couleurs, localisation et options de
+shell doivent etre faits dans le JSON per-user, pas dans `modules/theming/noctalia.nix`.
 
-1. Placer le fichier dans `dotfiles/themes/noctalia/`
-2. L'enregistrer dans la composition Home Manager active (`home/targets/<host>.nix`) via `home.file`
+## Mettre a jour Noctalia
 
-### Changer le theme GTK
+### Mettre a jour la version du package/module upstream
 
-Modifier `environment.sessionVariables.GTK_THEME` dans `noctalia.nix`,
-ou surcharger via `home-manager.users.<user>.gtk.theme`.
+Depuis le repo :
 
-## Ajouter un second theme
+```bash
+nix flake lock --update-input noctalia
+```
 
-Creer `modules/theming/<nom>.nix` en suivant le meme pattern que `noctalia.nix`.
-Exposer une option `workstation.theming.<nom>.enable`.
-Ne pas activer deux themes en meme temps sans gerer les conflits de variables.
+Puis :
+
+```bash
+nix --extra-experimental-features 'nix-command flakes' flake check
+PATH=/run/wrappers/bin:$PATH nix --extra-experimental-features 'nix-command flakes' --accept-flake-config run .#reconfigure -- ms-s1-max
+```
+
+### Mettre a jour la configuration apres un changement upstream
+
+1. lire la doc upstream et le schema courant
+2. verifier si `settingsVersion` doit changer
+3. adapter `dotfiles/noctalia/mfo/settings.json`
+4. rebuild le host
+5. verifier en session que `noctalia-shell` demarre toujours correctement
+
+## Ce qui ne doit pas etre fait
+
+- ne pas deplacer la config Noctalia principale dans des dotfiles arbitraires
+- ne pas activer `services.noctalia-shell` sauf besoin tres specifique et assume
+- ne pas traiter Noctalia comme un simple theme GTK : c'est bien le shell desktop

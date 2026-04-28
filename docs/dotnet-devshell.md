@@ -12,18 +12,22 @@ nix develop .#dotnet
 
 ## Ce qu'il contient
 
-Le périmètre exact est défini dans `modules/devshells/dotnet.nix`. Il reste volontairement réduit pour couvrir le développement .NET courant sans transformer le shell en environnement fourre-tout.
+Le point d'entree shell reste `systems/devshells/dotnet.nix`, mais son contenu
+vient maintenant du bundle `catalog/bundles/dotnet-devshell.nix`, lui-meme
+compose de briques atomiques dans `catalog/apps/`.
 
 ## Où il vit
 
-- `modules/devshells/dotnet.nix` : définition du shell .NET.
+- `catalog/apps/` : briques CLI atomiques mutualisees.
+- `catalog/bundles/dotnet-devshell.nix` : composition reutilisable du shell .NET.
+- `systems/devshells/dotnet.nix` : définition finale du shell .NET.
 - `flake.nix` : exposition via `devShells.<system>.dotnet` (cf. `docs/devshells.md`).
 
 ## Comment l'étendre proprement
 
 - ajouter un outil seulement s'il répond à un besoin récurrent du développement .NET ;
 - garder les dépendances spécifiques à un projet **dans le projet lui-même** quand c'est possible (par exemple via un `shell.nix` local au projet) ;
-- créer plus tard d'autres shells dédiés (`ops`, `desktop`, `tofu`) dans `modules/devshells/` plutôt que de surcharger celui-ci.
+- créer plus tard d'autres shells dédiés (`ops`, `desktop`, `tofu`) avec leurs briques dans `catalog/apps/` et leurs bundles dans `catalog/bundles/`, plutôt que de surcharger celui-ci.
 
 ## Ce qu'il ne doit pas devenir
 

@@ -1,6 +1,6 @@
 { ... }:
 {
-  imports = [ ../../../../modules/users/mfo.nix ];
+  imports = [ ../../../../systems/users/mfo.nix ];
 
   users.users.mfo.extraGroups = [ "render" ];
 }

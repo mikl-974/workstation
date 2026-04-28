@@ -14,6 +14,6 @@
 #   colors.conf defines the palette → each app config sources or copies the values.
 #   Centralizing here avoids maintaining colors in 5 different places.
 #
-# The NixOS module for Noctalia lives in modules/theming/noctalia.nix.
+# The NixOS module for Noctalia lives in systems/theming/noctalia.nix.
 # System-level theming (GTK env vars, installed packages) is handled there.
 # Visual configuration (actual colors, CSS) lives here and is applied via home-manager.

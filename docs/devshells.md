@@ -5,19 +5,30 @@
 Les devShells de `infra` sont locaux et orientes poste de travail personnel.
 
 Regle de placement :
-- `infra/modules/devshells/` — shells de productivite developpeur, specifiques au poste utilisateur
+- `infra/systems/devshells/` — shells de productivite developpeur, specifiques au poste utilisateur
 - les shells generiques de tooling serveur ou CI ne sont pas portes par ce repo aujourd'hui ; les ajouter ici uniquement quand un besoin reel emerge
 
 Un shell doit contenir des outils CLI et des runtimes.
 Les editeurs et IDE sont des applications desktop — ils ne vivent pas dans un shell.
 
+## Structure interne
+
+Les devshells reconsomment maintenant le meme catalogue mutualise que les
+wrappers NixOS :
+
+| Couche | Localisation | Rôle |
+|---|---|---|
+| Apps mutualisees | `catalog/apps/` | listes de paquets atomiques reutilisables |
+| Bundles mutualises | `catalog/bundles/` | compositions reutilisables de listes de paquets |
+| Point d'entree shell | `systems/devshells/<shell>.nix` | `pkgs.mkShell` qui assemble un bundle du catalogue |
+
 ## Separation editors / shell
 
 | Couche | Ce qu'elle contient | Localisation |
 |---|---|---|
-| devShell `.NET` | SDK, Docker CLI, outils CLI | `modules/devshells/dotnet.nix` |
-| Applications dev | VS Code, Rider, WebStorm, Neovim, GitKraken | `modules/apps/editors.nix` + `modules/apps/dev.nix` |
-| Containers locaux de dev | Podman + compatibilite Docker locale + Podman Desktop | `modules/containers/podman.nix` + `modules/apps/podman-desktop.nix` |
+| devShell `.NET` | SDK, Docker CLI, outils CLI | `systems/devshells/dotnet.nix` |
+| Applications dev | VS Code, Rider, WebStorm, Neovim, GitKraken | `systems/bundles/editors.nix` + `systems/bundles/dev.nix` |
+| Containers locaux de dev | Podman + compatibilite Docker locale + Podman Desktop | `systems/containers/podman.nix` + `systems/apps/podman-desktop.nix` |
 
 Les editeurs sont des applications desktop. Ils sont installes via le profil `dev`
 et disponibles a tout moment sur le poste. Le shell fournit l'environnement dans
@@ -31,9 +42,12 @@ Commande :
 nix develop .#dotnet
 ```
 
-Definition : `modules/devshells/dotnet.nix`.
+Definition : `systems/devshells/dotnet.nix`.
 
-Ce shell est **local au monorepo `infra`**, dans `infra/modules/devshells/dotnet.nix`. Il sert le poste de travail personnel et n'est pas exporte vers un autre repo.
+Le contenu assemble provient de `catalog/bundles/dotnet-devshell.nix`, lui-meme
+compose d'apps mutualisees sous `catalog/apps/`.
+
+Ce shell est **local au monorepo `infra`**, dans `infra/systems/devshells/dotnet.nix`. Il sert le poste de travail personnel et n'est pas exporte vers un autre repo.
 
 ### Contenu
 
@@ -54,8 +68,8 @@ VS Code, Rider et WebStorm sont des applications graphiques desktop.
 Les mettre dans un devShell signifiait les telecharger a chaque `nix develop`,
 les rendre indisponibles hors du shell, et melanger deux niveaux differents.
 
-Ils vivent desormais dans `modules/apps/editors.nix` et `modules/apps/dev.nix`
-et sont installes en tant que paquets systeme via `modules/profiles/dev.nix`.
+Ils vivent desormais dans `systems/bundles/editors.nix` et `systems/bundles/dev.nix`
+et sont installes en tant que paquets systeme via `systems/profiles/dev.nix`.
 Ils sont toujours disponibles, independamment de l'entree dans un shell de dev.
 
 ## Pourquoi ce shell est local au repo
@@ -68,7 +82,7 @@ autre repo n'a besoin de les consommer.
 ## Relation shell `.NET` / Podman
 
 Le shell `.NET` garde le binaire `docker-client`, mais le backend containers local
-est desormais structure cote systeme dans `modules/containers/podman.nix`.
+est desormais structure cote systeme dans `systems/containers/podman.nix`.
 
 Podman Desktop reste une application graphique separee. Il ne vit pas dans le
 devShell et reste installe comme package systeme sur le host qui porte cette UX.
@@ -81,7 +95,8 @@ But :
 
 ## Etendre le shell
 
-Ajouter des outils dans `modules/devshells/dotnet.nix`, section `packages`.
+Ajouter un outil dans `catalog/apps/`, puis l'inclure dans un bundle sous
+`catalog/bundles/` si besoin.
 
 Exemples d'extensions :
 
@@ -96,8 +111,8 @@ httpie
 
 Ajouter :
 
-- un editeur / IDE dans `modules/apps/editors.nix`
-- une application dev desktop non-editeur dans `modules/apps/dev.nix`
+- un bundle d'editeurs / IDE dans `systems/bundles/editors.nix`
+- une application dev desktop non-editeur dans `systems/bundles/dev.nix`
 
 Exemple :
 
@@ -107,9 +122,11 @@ jetbrains.goland
 
 ## Ajouter un nouveau devShell
 
-1. Creer `modules/devshells/<nom>.nix`
-2. L'exposer dans `flake.nix` via `devShells.<system>.<nom>`
-3. Documenter son usage dans ce fichier
+1. Creer des briques atomiques dans `catalog/apps/` si besoin
+2. Creer un bundle dans `catalog/bundles/<nom>.nix`
+3. Creer `systems/devshells/<nom>.nix`
+4. L'exposer dans `flake.nix` via `devShells.<system>.<nom>`
+5. Documenter son usage dans ce fichier
 
 ## Quand extraire un shell hors de ce repo
 
@@ -121,4 +138,4 @@ Un shell pourrait justifier d'etre extrait vers un autre repo seulement s'il est
 - stable et clairement delimite
 - reellement consomme par au moins un second repo
 
-Un shell de productivite personnelle reste dans `infra/modules/devshells/`.
+Un shell de productivite personnelle reste dans `infra/systems/devshells/`.

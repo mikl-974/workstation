@@ -8,8 +8,8 @@ Dans ce repo, l'integration correcte est :
 
 | Couche | Localisation | Role |
 |---|---|---|
-| Activation workstation | `modules/profiles/desktop-hyprland.nix` | active l'integration Noctalia sur les postes Hyprland |
-| Integration systeme | `modules/theming/noctalia.nix` | dependances visuelles globales et variables de session |
+| Activation workstation | `systems/profiles/desktop-hyprland.nix` | active l'integration Noctalia sur les postes Hyprland |
+| Integration systeme | `systems/theming/noctalia.nix` | dependances visuelles globales et variables de session |
 | Role Home Manager | `home/roles/noctalia.nix` | import du module Home Manager upstream + activation du shell |
 | Config Noctalia par user | `home/users/<user>.nix` + `dotfiles/noctalia/<user>/settings.json` | fichier JSON versionne par user et reference par Home Manager |
 | Overrides plugins par user | `dotfiles/noctalia/<user>/plugins*` | activation des plugins et correctifs locaux versionnes |
@@ -28,7 +28,7 @@ Documentation upstream :
 
 ## Ce que fait le repo aujourd'hui
 
-### `modules/theming/noctalia.nix`
+### `systems/theming/noctalia.nix`
 
 Ce module ne porte **pas** la configuration du shell.
 
@@ -109,7 +109,7 @@ home/users/mfo.nix
 ```
 
 Les changements de barre, widgets, densite, couleurs, localisation et options de
-shell doivent etre faits dans le JSON per-user, pas dans `modules/theming/noctalia.nix`.
+shell doivent etre faits dans le JSON per-user, pas dans `systems/theming/noctalia.nix`.
 
 ## Mettre a jour Noctalia
 

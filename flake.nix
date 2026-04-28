@@ -59,10 +59,10 @@
 
       # Shared building blocks used by all infra NixOS targets.
       sharedModules = [
-        ./modules/networking/tailscale.nix
+        ./systems/networking/tailscale.nix
         home-manager.nixosModules.home-manager
         sops-nix.nixosModules.sops
-        ./modules/security/sops.nix
+        ./systems/security/sops.nix
       ];
 
       # Shared building blocks used by Darwin targets.
@@ -162,17 +162,17 @@
       };
 
       # .NET devShell is defined locally — this is an infra-local dev
-      # environment, not a generic shared primitive. See modules/devshells/dotnet.nix.
+      # environment, not a generic shared primitive. See systems/devshells/dotnet.nix.
       devShells = lib.genAttrs systems (system:
         let pkgs = import nixpkgs { inherit system; };
         in {
-          dotnet = import ./modules/devshells/dotnet.nix { inherit pkgs; };
+          dotnet = import ./systems/devshells/dotnet.nix { inherit pkgs; };
         }
       );
 
       # Installation and validation scripts exposed as nix run .#<name> apps.
       # These scripts orchestrate, verify, and guide — they do not redefine
-      # the configuration, which remains in flake.nix, targets/hosts/, home/, stacks/, and modules/.
+      # the configuration, which remains in flake.nix, targets/hosts/, home/, stacks/, and systems/.
       apps = lib.genAttrs systems (system:
         let pkgs = import nixpkgs { inherit system; };
 

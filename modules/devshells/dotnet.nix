@@ -5,30 +5,13 @@
 #
 # Scope: CLI tooling and runtimes only.
 # IDEs (VS Code, Rider, WebStorm) are desktop applications — they live in
-# modules/apps/editors.nix and are installed via profiles/dev.nix.
+# modules/bundles/editors.nix and are installed as system packages on the
+# workstation.
 #
 # Personal dev workstation tooling belongs in this repo. It is intentionally
-# kept inside `infra/modules/devshells/` rather than abstracted out: there is
-# no second consumer that would justify a shared layer.
+# kept inside `infra/`, but now reuses the shared package catalog so shell and
+# NixOS package wrappers don't fork their package lists.
 { pkgs }:
 pkgs.mkShell {
-  packages = with pkgs; [
-    # .NET SDK — main runtime and build toolchain
-    dotnet-sdk_10
-
-    # Version control and HTTP utilities
-    git
-    curl
-    jq
-
-    # TLS / PKI
-    openssl
-    pkg-config
-
-    # Container tooling — Docker CLI (daemon managed separately by the host OS)
-    docker-client
-
-    # Browser automation testing
-    playwright
-  ];
+  packages = import ../../catalog/bundles/dotnet-devshell.nix { inherit pkgs; };
 }

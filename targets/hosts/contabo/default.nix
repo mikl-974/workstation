@@ -1,17 +1,17 @@
 # NixOS configuration for the Contabo VPS (`contabo`).
 #
 # Composition:
-# - `modules/profiles/server.nix` provides the hardened server baseline
+# - `systems/profiles/server.nix` provides the hardened server baseline
 #   (sudo, SSH, firewall + tailscale0 trust, Tailscale, generic admin user).
-# - `modules/dokploy` activates the Docker engine and opens 80/443 so Dokploy
+# - `systems/dokploy` activates the Docker engine and opens 80/443 so Dokploy
 #   can operate workloads. Dokploy itself runs outside of Nix.
 # - `disko.nix` describes a simple GPT/EFI/ext4 layout for the VPS root disk.
 { config, hostVars, lib, ... }:
 {
   imports = [
-    ../../../modules/profiles/server.nix
-    ../../../modules/users/root.nix
-    ../../../modules/dokploy
+    ../../../systems/profiles/server.nix
+    ../../../systems/users/root.nix
+    ../../../systems/dokploy
   ];
 
   networking.hostName = hostVars.hostname;
@@ -29,7 +29,7 @@
 
   infra.users.admin.hashedPasswordFile =
     config.sops.secrets."contabo/users/admin-password-hash".path;
-  infra.users.admin.sshAuthorizedKeys = (import ../../../modules/users/authorized-keys.nix).mfo;
+  infra.users.admin.sshAuthorizedKeys = (import ../../../systems/users/authorized-keys.nix).mfo;
 
   infra.users.root = {
     enable = true;

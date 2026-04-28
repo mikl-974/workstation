@@ -2,13 +2,13 @@
 
 ## Pourquoi ce module existe
 
-Tailscale fait partie du socle réseau commun des hosts NixOS de ce repo. Il est traité comme une responsabilité système (couche `modules/networking/`), pas comme une stack applicative.
+Tailscale fait partie du socle réseau commun des hosts NixOS de ce repo. Il est traité comme une responsabilité système (couche `systems/networking/`), pas comme une stack applicative.
 
 ## Où il vit
 
-- `modules/networking/tailscale.nix` : module réutilisable sous l'option `infra.networking.tailscale.*` (vendoré dans le lot A1 depuis l'ancien flake `foundation`, dont le namespace était `foundation.networking.tailscale.*`).
-- `modules/profiles/networking.nix` : activation par défaut côté workstation (cf. `docs/profiles.md`).
-- `modules/profiles/server.nix` : activation côté server (importé par `targets/hosts/contabo/`).
+- `systems/networking/tailscale.nix` : module réutilisable sous l'option `infra.networking.tailscale.*` (vendoré dans le lot A1 depuis l'ancien flake `foundation`, dont le namespace était `foundation.networking.tailscale.*`).
+- `systems/profiles/networking.nix` : activation par défaut côté workstation (cf. `docs/profiles.md`).
+- `systems/profiles/server.nix` : activation côté server (importé par `targets/hosts/contabo/`).
 
 ## Où il est activé
 

@@ -1,8 +1,8 @@
 { hostVars, ... }:
 {
   imports = [
-    ../../../../modules/darwin/base.nix
-    ../../../../modules/darwin/homebrew.nix
+    ../../../../systems/darwin/base.nix
+    ../../../../systems/darwin/homebrew.nix
     ./user.nix
     ./capabilities.nix
   ];

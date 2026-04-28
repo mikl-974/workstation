@@ -7,11 +7,11 @@
   #
   # Keep the mapping explicit here even when it imports reusable bundles.
   imports = [
-    ../../../../modules/containers/podman.nix
-    ../../../../modules/apps/dev-workstation.nix
-    ../../../../modules/apps/podman-desktop.nix
-    ../../../../modules/apps/ai-local.nix
-    ../../../../modules/apps/rocm-runtime.nix
+    ../../../../systems/containers/podman.nix
+    ../../../../systems/bundles/dev-workstation.nix
+    ../../../../systems/apps/podman-desktop.nix
+    ../../../../systems/bundles/ai-local.nix
+    ../../../../systems/bundles/rocm-runtime.nix
   ];
 
   # AnythingLLM is part of the intended workstation setup, but remains

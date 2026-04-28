@@ -18,7 +18,7 @@ entre plusieurs machines physiques et ne doit pas etre confondue avec un host.
 
 | Couche | Role | Source de verite |
 |---|---|---|
-| `modules/` | briques Nix reutilisables | modules systeme, reseau, securite, desktop |
+| `systems/` | briques Nix reutilisables | modules systeme, reseau, securite, desktop |
 | `targets/hosts/` | machines concretes | un dossier par host reel |
 | `targets/vms/` | definitions de VM portables | une definition reutilisable, independante du host physique |
 | `home/` | composition utilisateur | users, roles, binding final par host |
@@ -107,8 +107,8 @@ Son IA reste un choix de machine locale, pas un service infra partage.
 
 - NixOS
 - workstation principale
-- base desktop : `modules/profiles/workstation-common.nix`
-- user systeme : `modules/users/mfo.nix`
+- base desktop : `systems/profiles/workstation-common.nix`
+- user systeme : `systems/users/mfo.nix`
 - Home Manager : `home/targets/ms-s1-max.nix`
 - mapping logiciel local : `targets/hosts/ms-s1-max/config/capabilities.nix`
 - IA GPU AMD : `pkgs.ollama-rocm`, `pkgs.llama-cpp-rocm`, `pkgs.python3Packages.huggingface-hub`, `nixpkgs.config.rocmSupport = true`
@@ -118,7 +118,7 @@ Son IA reste un choix de machine locale, pas un service infra partage.
 
 - NixOS
 - serveur headless
-- base serveur : `modules/profiles/server.nix`
+- base serveur : `systems/profiles/server.nix`
 - runtime d'apps : Dokploy
 - placement des stacks dans `deployments/inventory.nix`
 

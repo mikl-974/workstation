@@ -2,9 +2,10 @@
 
 ## Vue d'ensemble
 
-- `modules/` : briques reutilisables
+- `systems/` : briques reutilisables
 - `targets/hosts/` : machines concretes
 - `targets/vms/` : definitions de VM portables
+- `catalog/` : catalogue mutualise de paquets et bundles
 - `home/` : composition Home Manager
 - `dotfiles/` : fichiers applicatifs
 - `stacks/` : contrats de services deployables
@@ -36,9 +37,10 @@ l'heberge.
 
 Modifier :
 
-- `modules/apps/<app>.nix` pour une brique atomique
-- `modules/apps/<bundle>.nix` pour un lot coherent
-- `modules/profiles/<profile>.nix` seulement si ce lot merite un vrai point d'entree reutilisable
+- `catalog/apps/<app>.nix` ou `catalog/bundles/<bundle>.nix` si le changement porte sur une liste de paquets mutualisee
+- `systems/apps/<app>.nix` pour une brique atomique
+- `systems/bundles/<bundle>.nix` pour un lot coherent
+- `systems/profiles/<profile>.nix` seulement si ce lot merite un vrai point d'entree reutilisable
 
 ### Changer la composition utilisateur
 
@@ -72,7 +74,7 @@ de travail de cette machine.
 Cette regle n'empeche pas les bundles utiles.
 Exemple :
 
-- `modules/apps/lutris.nix` peut etre importe seul
-- `modules/profiles/gaming.nix` peut composer le pack gaming complet
-- `modules/apps/rider.nix` peut etre importe seul
-- `modules/apps/dev-workstation.nix` peut composer le pack dev
+- `systems/apps/lutris.nix` peut etre importe seul
+- `systems/profiles/gaming.nix` peut composer le pack gaming complet
+- `systems/apps/rider.nix` peut etre importe seul
+- `systems/bundles/dev-workstation.nix` peut composer le pack dev

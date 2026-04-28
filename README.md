@@ -35,7 +35,7 @@ Exemple :
 
 ## Structure
 
-- `modules/` : briques Nix reutilisables
+- `systems/` : briques Nix reutilisables
 - `targets/hosts/` : machines concretes
 - `targets/vms/` : definitions de VM portables
 - `home/` : composition Home Manager
@@ -62,8 +62,8 @@ Exemple :
 ### `contabo`
 
 - VPS NixOS headless
-- base serveur dans `modules/profiles/server.nix`
-- Dokploy active via `modules/dokploy`
+- base serveur dans `systems/profiles/server.nix`
+- Dokploy active via `systems/dokploy`
 - stacks deployees via `deployments/inventory.nix`
 - deployable par Colmena
 

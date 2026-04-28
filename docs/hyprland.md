@@ -4,23 +4,23 @@
 
 La base desktop Hyprland est organisee ainsi :
 
-- profil : `modules/profiles/desktop-hyprland.nix`
+- profil : `systems/profiles/desktop-hyprland.nix`
 - modules :
-  - `modules/desktop/default.nix`
-  - `modules/desktop/hyprland.nix`
-  - `modules/desktop/audio.nix`
-  - `modules/desktop/connectivity.nix`
-  - `modules/desktop/portals.nix`
-  - `modules/desktop/fonts.nix`
-  - `modules/desktop/warp.nix`
-  - `modules/apps/daily.nix`
-  - `modules/apps/utilities.nix`
+  - `systems/desktop/default.nix`
+  - `systems/desktop/hyprland.nix`
+  - `systems/desktop/audio.nix`
+  - `systems/desktop/connectivity.nix`
+  - `systems/desktop/portals.nix`
+  - `systems/desktop/fonts.nix`
+  - `systems/desktop/warp.nix`
+  - `systems/bundles/daily.nix`
+  - `systems/bundles/utilities.nix`
   - la composition Home Manager active (`home/targets/<host>.nix`)
   - `dotfiles/hyprland/hyprland.conf`
   - `dotfiles/launchers/`
   - `dotfiles/terminal/`
   - `dotfiles/notifications/`
-- theming : `modules/theming/noctalia.nix`
+- theming : `systems/theming/noctalia.nix`
 
 ## Composition actuelle
 
@@ -49,22 +49,22 @@ La base inclut :
 - historique clipboard actif via `cliphist` + `wl-paste --watch`
 - bindings de base pour terminal, launcher, navigateur, fichiers et clipboard history
 
-Tailscale est active via `modules/profiles/networking.nix` (module local `infra/modules/networking/tailscale.nix`), pas depuis le profil desktop.
+Tailscale est active via `systems/profiles/networking.nix` (module local `infra/systems/networking/tailscale.nix`), pas depuis le profil desktop.
 
 ## Ce qui n'est volontairement pas inclus
 
 - logique utilisateur cachee
-- Tailscale (il vient de `modules/networking/tailscale.nix` via `modules/profiles/networking.nix`)
+- Tailscale (il vient de `systems/networking/tailscale.nix` via `systems/profiles/networking.nix`)
 
 ## Noctalia
 
-Noctalia est active dans `modules/profiles/desktop-hyprland.nix` via :
+Noctalia est active dans `systems/profiles/desktop-hyprland.nix` via :
 
 ```nix
 workstation.theming.noctalia.enable = true;
 ```
 
-Le module systeme (`modules/theming/noctalia.nix`) garde seulement les
+Le module systeme (`systems/theming/noctalia.nix`) garde seulement les
 dependances visuelles globales (GTK, curseur, variables de session).
 La configuration officielle du shell lui-meme vit dans `home/roles/noctalia.nix`
 via `inputs.noctalia.homeModules.default`.
@@ -84,21 +84,21 @@ Voir `docs/theming.md` pour les details.
 
 ## Cloudflare WARP
 
-WARP est gere dans `modules/desktop/warp.nix` et active via `modules/profiles/desktop-hyprland.nix`.
+WARP est gere dans `systems/desktop/warp.nix` et active via `systems/profiles/desktop-hyprland.nix`.
 
-Il reste dans `workstation` parce que c'est un client VPN desktop (interface utilisateur), pas une primitive reseau serveur. Un eventuel module `cloudflared` (tunnel daemon) serait une brique differente et distincte, a placer dans `modules/networking/` cote serveur.
+Il reste dans `workstation` parce que c'est un client VPN desktop (interface utilisateur), pas une primitive reseau serveur. Un eventuel module `cloudflared` (tunnel daemon) serait une brique differente et distincte, a placer dans `systems/networking/` cote serveur.
 
 ## Connectivite locale et utilitaires
 
 La base desktop integre aussi :
 
-- `modules/apps/daily.nix` pour les applications de base du quotidien
-- `modules/desktop/connectivity.nix` pour la pile Wi-Fi/Bluetooth locale et les applets
-- `modules/apps/utilities.nix` pour les petits outils quotidiens
+- `systems/bundles/daily.nix` pour les applications de base du quotidien
+- `systems/desktop/connectivity.nix` pour la pile Wi-Fi/Bluetooth locale et les applets
+- `systems/bundles/utilities.nix` pour les petits outils quotidiens
 
-Solaar est gere dans `modules/desktop/connectivity.nix` via le module NixOS Logitech, car il a besoin des regles udev adequates.
-Les applications quotidiennes restent dans `modules/apps/daily.nix`.
-Les petits outils techniques desktop restent dans `modules/apps/utilities.nix`.
+Solaar est gere dans `systems/desktop/connectivity.nix` via le module NixOS Logitech, car il a besoin des regles udev adequates.
+Les applications quotidiennes restent dans `systems/bundles/daily.nix`.
+Les petits outils techniques desktop restent dans `systems/bundles/utilities.nix`.
 
 ## UX du premier login
 
@@ -125,8 +125,8 @@ Repartition retenue :
 
 | Couche | Rôle |
 |---|---|
-| `modules/desktop/hyprland.nix` | active Hyprland et les paquets Wayland de base |
-| `modules/apps/daily.nix` | installe `mako` et `cliphist` comme apps desktop |
+| `systems/desktop/hyprland.nix` | active Hyprland et les paquets Wayland de base |
+| `systems/bundles/daily.nix` | installe `mako` et `cliphist` comme apps desktop |
 | la composition Home Manager active (`home/targets/<host>.nix`) | lie les fichiers utilisateur actifs |
 | `dotfiles/hyprland/hyprland.conf` | autostart et bindings Hyprland |
 | `dotfiles/launchers/` | comportement et style du launcher |
@@ -141,11 +141,11 @@ Ainsi :
 
 ## Etendre proprement
 
-- ajouter la logique desktop commune dans `modules/desktop/`
-- garder les applications quotidiennes dans `modules/apps/daily.nix`
+- ajouter la logique desktop commune dans `systems/desktop/`
+- garder les applications quotidiennes dans `systems/bundles/daily.nix`
 - garder l'autostart et les bindings utilisateur dans `dotfiles/hyprland/hyprland.conf`
 - garder les fichiers applicatifs bruts dans `dotfiles/`
 - garder les choix machine-specifiques dans `targets/`
 - deplacer la personnalisation utilisateur dans `dotfiles/` + `home/`
-- garder Tailscale dans `modules/profiles/networking.nix`
-- garder la connectivite locale desktop (Wi-Fi/Bluetooth/Solaar) dans `modules/desktop/`
+- garder Tailscale dans `systems/profiles/networking.nix`
+- garder la connectivite locale desktop (Wi-Fi/Bluetooth/Solaar) dans `systems/desktop/`

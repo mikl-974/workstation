@@ -8,7 +8,7 @@ cartographie doit rester evidente.
 
 ## Profils encore utiles
 
-### `modules/profiles/workstation-common.nix`
+### `systems/profiles/workstation-common.nix`
 
 Base commune pour une workstation NixOS :
 
@@ -18,7 +18,7 @@ Base commune pour une workstation NixOS :
 - theming
 - boot EFI
 
-### `modules/profiles/server.nix`
+### `systems/profiles/server.nix`
 
 Base commune pour un serveur NixOS :
 
@@ -27,7 +27,7 @@ Base commune pour un serveur NixOS :
 - Tailscale
 - user admin
 
-### `modules/profiles/gaming.nix`
+### `systems/profiles/gaming.nix`
 
 Profil optionnel de bundle.
 
@@ -36,9 +36,9 @@ un tout coherent.
 
 Mais le bundle ne remplace pas les briques atomiques :
 
-- `modules/apps/lutris.nix`
-- `modules/apps/steam.nix`
-- `modules/apps/gaming.nix`
+- `systems/apps/lutris.nix`
+- `systems/apps/steam.nix`
+- `systems/bundles/gaming.nix`
 
 ## Decision de recentrage
 
@@ -59,6 +59,6 @@ Exemple :
 
 - `ms-s1-max` importe `workstation-common`
 - `ms-s1-max` declare ses outils IA/dev dans `config/capabilities.nix`
-- ces outils peuvent venir de bundles reutilisables comme `modules/apps/dev-workstation.nix` ou `modules/apps/ai-local.nix`
-- un futur host gaming pourrait importer `modules/profiles/gaming.nix`
-- un host non gaming pourrait n'importer que `modules/apps/lutris.nix`
+- ces outils peuvent venir de bundles reutilisables comme `systems/bundles/dev-workstation.nix` ou `systems/bundles/ai-local.nix`
+- un futur host gaming pourrait importer `systems/profiles/gaming.nix`
+- un host non gaming pourrait n'importer que `systems/apps/lutris.nix`

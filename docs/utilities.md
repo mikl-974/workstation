@@ -16,19 +16,20 @@ Deux briques complementaires :
 
 | Couche | Fichier | Rôle |
 |---|---|---|
-| Apps utilitaires | `modules/apps/utilities.nix` | petits outils desktop lances par l'utilisateur |
-| Connectivite desktop | `modules/desktop/connectivity.nix` | Bluetooth, Wi-Fi/NetworkManager, applets et integration Logitech |
+| Bundle utilitaires | `systems/bundles/utilities.nix` | petits outils desktop lances par l'utilisateur |
+| Connectivite desktop | `systems/desktop/connectivity.nix` | Bluetooth, Wi-Fi/NetworkManager, applets et integration Logitech |
 
 Cette separation suit l'architecture du repo :
 
-- `modules/apps/daily.nix` = applications quotidiennes
-- `modules/apps/` = paquets
-- `modules/desktop/` = configuration systeme desktop
+- `systems/bundles/daily.nix` = applications quotidiennes
+- `systems/apps/` = apps atomiques
+- `systems/bundles/` = lots coherents
+- `systems/desktop/` = configuration systeme desktop
 - `profiles/desktop-hyprland.nix` = composition
 
 ## Contenu
 
-### `modules/apps/utilities.nix`
+### `systems/bundles/utilities.nix`
 
 Paquets installes :
 
@@ -40,9 +41,9 @@ Paquets installes :
 | `playerctl` | controle des lecteurs multimedia |
 
 Ces paquets sont des **helpers techniques desktop**.
-Les applications de base de l'utilisateur (navigateur, PDF, images, fichiers, archives) vivent dans `modules/apps/daily.nix`.
+Les applications de base de l'utilisateur (navigateur, PDF, images, fichiers, archives) vivent dans `systems/bundles/daily.nix`.
 
-### `modules/desktop/connectivity.nix`
+### `systems/desktop/connectivity.nix`
 
 Configuration systeme :
 
@@ -75,7 +76,7 @@ Conclusion :
 
 - **Solaar reste dans `infra`**
 - **il n'est pas extrait vers un repo partage**
-- **il vit dans `modules/desktop/connectivity.nix` parce qu'il est couple au support systeme des peripheriques**
+- **il vit dans `systems/desktop/connectivity.nix` parce qu'il est couple au support systeme des peripheriques**
 
 ## Bluetooth
 
@@ -84,7 +85,7 @@ Le support Bluetooth desktop est structure ainsi :
 - pile systeme : `hardware.bluetooth.enable`
 - experience desktop : `services.blueman.enable`
 
-La logique reste dans `modules/desktop/connectivity.nix`, pas dans les hosts.
+La logique reste dans `systems/desktop/connectivity.nix`, pas dans les hosts.
 
 ## Wi-Fi / NetworkManager
 
@@ -94,15 +95,15 @@ La couche Wi-Fi / connectivite locale est structuree ainsi :
 - applet desktop : `programs.nm-applet.enable`
 - outil d'edition avancee : `nm-connection-editor`
 
-Tailscale reste separe dans `profiles/networking.nix` via le module local `modules/networking/tailscale.nix`.
+Tailscale reste separe dans `profiles/networking.nix` via le module local `systems/networking/tailscale.nix`.
 
 ## Frontiere desktop / reseau
 
-Ce qui reste dans `modules/networking/` (briques reseau systeme reutilisables) :
+Ce qui reste dans `systems/networking/` (briques reseau systeme reutilisables) :
 
 - les briques reseau generiques et partageables (ex. Tailscale)
 
-Ce qui reste dans `modules/desktop/` et `modules/apps/` (couche desktop utilisateur) :
+Ce qui reste dans `systems/desktop/`, `systems/apps/` et `systems/bundles/` (couche desktop utilisateur) :
 
 - les daily apps desktop
 - les applets desktop
@@ -112,15 +113,16 @@ Ce qui reste dans `modules/desktop/` et `modules/apps/` (couche desktop utilisat
 
 Regle :
 
-- si c'est une primitive reseau systeme reutilisable → `modules/networking/`
-- si c'est lie au bureau utilisateur et a la machine locale → `modules/desktop/` ou `modules/apps/`
+- si c'est une primitive reseau systeme reutilisable → `systems/networking/`
+- si c'est lie au bureau utilisateur et a la machine locale → `systems/desktop/`, `systems/apps/` ou `systems/bundles/`
 
 ## Extension propre
 
 Pour ajouter un nouvel utilitaire :
 
-1. si c'est une application quotidienne de base → `modules/apps/daily.nix`
-2. si c'est un helper technique desktop → `modules/apps/utilities.nix`
-3. si c'est une integration systeme desktop → `modules/desktop/connectivity.nix` ou un autre module desktop cible
-4. ne pas le mettre dans un host
-5. ne pas le disperser entre `shell/`, `profiles/` et `dotfiles/` sans raison
+1. si c'est une application quotidienne de base bundlee → `systems/bundles/daily.nix`
+2. si c'est un helper technique desktop bundle → `systems/bundles/utilities.nix`
+3. si c'est une app atomique installable seule → `systems/apps/<app>.nix`
+4. si c'est une integration systeme desktop → `systems/desktop/connectivity.nix` ou un autre module desktop cible
+5. ne pas le mettre dans un host
+6. ne pas le disperser entre `shell/`, `profiles/` et `dotfiles/` sans raison

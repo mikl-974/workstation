@@ -1,8 +1,8 @@
 { config, ... }:
 {
   imports = [
-    ../../../../modules/profiles/workstation-common.nix
-    ../../../../modules/users/root.nix
+    ../../../../systems/profiles/workstation-common.nix
+    ../../../../systems/users/root.nix
     ./user.nix
     ./capabilities.nix
   ];

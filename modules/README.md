@@ -4,11 +4,13 @@ Briques Nix reutilisables du repo.
 
 ## Dossiers principaux
 
-- `modules/apps/` : petits lots de paquets reutilisables
+- `catalog/` : catalogue mutualise de paquets atomiques et de bundles reutilisables
+- `modules/apps/` : apps atomiques ou capacites unitaires
+- `modules/bundles/` : compositions reutilisables de plusieurs apps ou paquets
 - `modules/containers/` : moteurs de containers locaux
 - `modules/darwin/` : base Darwin
 - `modules/desktop/` : base desktop NixOS
-- `modules/devshells/` : environnements de dev CLI
+- `modules/devshells/` : points d'entree `mkShell` des environnements de dev CLI
 - `modules/dokploy/` : preparation serveur Dokploy
 - `modules/networking/` : reseau reutilisable
 - `modules/profiles/` : profils publics importes par les hosts
@@ -32,20 +34,24 @@ Exemple :
 
 Le repo retient maintenant cette hierarchie :
 
+- `catalog/apps/<app>.nix` : liste de paquets mutualisee pour une brique atomique
+- `catalog/bundles/<bundle>.nix` : composition mutualisee de listes de paquets
 - `modules/apps/<app>.nix` : app ou capacite atomique
-- `modules/apps/<bundle>.nix` : bundle applicatif compose de plusieurs apps
+- `modules/bundles/<bundle>.nix` : bundle applicatif compose de plusieurs apps
+- `modules/devshells/<shell>.nix` : point d'entree `mkShell` qui assemble le catalogue
 - `modules/profiles/<profile>.nix` : profil reutilisable quand le bundle a un vrai sens de composition
 
 Exemple retenu :
 
 - `modules/apps/lutris.nix` : installer Lutris seul
 - `modules/apps/steam.nix` : installer Steam seul
-- `modules/apps/gaming.nix` : pack gaming compose
+- `modules/bundles/gaming.nix` : pack gaming compose
 - `modules/profiles/gaming.nix` : point d'entree reutilisable si un host veut le bundle complet
 - `modules/apps/rider.nix` : installer Rider seul
 - `modules/apps/webstorm.nix` : installer WebStorm seul
-- `modules/apps/dev-workstation.nix` : bundle dev de workstation
-- `modules/apps/ai-local.nix` : bundle IA locale
+- `modules/bundles/dev-workstation.nix` : bundle dev de workstation
+- `modules/bundles/ai-local.nix` : bundle IA locale
+- `modules/devshells/dotnet.nix` : shell CLI qui reconsomme `catalog/bundles/dotnet-devshell.nix`
 
 Donc :
 

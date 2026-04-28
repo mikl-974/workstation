@@ -25,5 +25,7 @@ nix run .#install-manual -- ms-s1-max
 ou, sur un systeme deja installe :
 
 ```bash
-nix run .#reconfigure -- ms-s1-max
+nix run .#reconfigure -- ms-s1-max --extra-experimental-features 'nix-command flakes'
 ```
+
+// PATH=/run/wrappers/bin:$PATH nix --extra-experimental-features 'nix-command flakes' --accept-flake-config run .#reconfigure -- ms-s1-max

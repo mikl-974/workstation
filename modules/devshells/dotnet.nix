@@ -14,7 +14,7 @@
 pkgs.mkShell {
   packages = with pkgs; [
     # .NET SDK — main runtime and build toolchain
-    dotnet-sdk
+    dotnet-sdk_10
 
     # Version control and HTTP utilities
     git

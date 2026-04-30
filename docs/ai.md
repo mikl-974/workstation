@@ -12,16 +12,14 @@ Le point d'entree unique est :
 ## Ce qui est active sur `ms-s1-max`
 
 - `nixpkgs.config.rocmSupport = true`
-- `services.ollama.enable = true`
-- `services.ollama.package = pkgs.ollama-rocm`
-- paquet `ollama-rocm`
 - paquet `llama-cpp-rocm`
 - paquet `python3Packages.huggingface-hub` (`hf`)
-- repertoire persistant `/var/lib/llama-cpp/models`
+- repertoires persistants `/var/lib/llama-cpp/models` et `/var/lib/llama-cpp/cache/*`
 - paquets systeme `rocm-runtime`, `rocminfo`, `rocm-smi`, `amdsmi`
 - paquet `opencode-desktop`
 - `services.flatpak.enable = true`
 - user `mfo` ajoute au groupe `render`
+- user systeme `llama-cpp` pour les services et caches persistants
 - override ROCm Strix Halo `HSA_OVERRIDE_GFX_VERSION = "11.5.1"`
 - workaround MIOpen `MIOPEN_DEBUG_DISABLE_FIND_DB = "1"`
 
@@ -31,8 +29,6 @@ Sur `ms-s1-max`, le host fixe maintenant explicitement :
 
 - `environment.variables.HSA_OVERRIDE_GFX_VERSION = "11.5.1"`
 - `environment.variables.MIOPEN_DEBUG_DISABLE_FIND_DB = "1"`
-- `services.ollama.rocmOverrideGfx = "11.5.1"`
-- `services.ollama.environmentVariables.MIOPEN_DEBUG_DISABLE_FIND_DB = "1"`
 
 Pourquoi :
 
@@ -47,8 +43,9 @@ Le repo applique le tuning a deux niveaux :
 
 - globalement via `environment.variables` pour les usages manuels (`llama.cpp`,
   outils ROCm, shells)
-- specifiquement dans `services.ollama.*` car les variables de service ne sont
-  pas prises depuis le shell utilisateur
+
+Pour le moment, Ollama est retire de la configuration active : le tuning ROCm
+reste donc porte au niveau host pour `llama.cpp` direct et les outils ROCm.
 
 ## Outils dev associes
 
@@ -93,40 +90,69 @@ llama-server -m /var/lib/llama-cpp/models/<modele>/<fichier.gguf>
 Le repertoire est cree declarativement par NixOS et reste hors du store pour
 permettre des tests de quantizations ou de variantes sans rebuild systeme.
 
-## Service `llama.cpp` actif
+## Services `llama.cpp`
 
-Sur `ms-s1-max`, le repo active aussi un service systemd `llama-cpp-server`
-qui demarre en mode serveur sur :
+Le repo ne garde plus un service systemd `llama-cpp-server` code en dur.
+`systems/apps/llama-cpp.nix` expose maintenant un module declaratif
+`infra.ai.inference.llamaCpp` qui :
 
-- `127.0.0.1:8080`
-- modele par defaut :
-  `/var/lib/llama-cpp/models/qwen3.5-35b-a3b/Qwen_Qwen3.5-35B-A3B-Q4_K_M.gguf`
+- genere un service systemd par modele
+- separe les defaults moteur des declarations de modeles du host
+- garde `llama.cpp` distinct de `ollama`, qui n'est pas active actuellement
+- laisse les futurs routeurs/UI hors du moteur d'inference
 
-Pourquoi ce choix :
+Sur `ms-s1-max`, `targets/hosts/ms-s1-max/config/capabilities.nix` declare :
 
-- `Qwen3.5-35B-A3B` est un MoE texte bien adapte au service `llama.cpp`
-- la quantization `Q4_K_M` garde un bon compromis qualite / empreinte memoire
-  sur `ms-s1-max`
-- c'est un GGUF texte unique, donc simple a servir et a remplacer
-- il profite du meme tuning ROCm Strix Halo que le reste de la stack locale
+- `llama-cpp-qwen36-27b-bf16.service`
+- `llama-cpp-gemma4.service`
 
-Le service fixe aussi :
+Le host fixe des defaults `llama.cpp` adaptes a Strix Halo :
 
-- `--ctx-size 16384`
-- `--n-gpu-layers 999` pour pousser l'offload GPU au maximum
-- `--flash-attn auto`
-- `--metrics` pour exposer l'endpoint de metriques du serveur
+- `package = pkgs.llama-cpp-rocm`
+- `host = "127.0.0.1"`
+- `-fit off`
+- `--metrics`
+- `GGML_CUDA_ENABLE_UNIFIED_MEMORY = "1"`
+- pas d'ouverture firewall par defaut
+
+Modeles servis :
+
+- `qwen36-27b-bf16`
+  - source Hugging Face : `unsloth/Qwen3.6-27B-GGUF:BF16`
+  - bind `127.0.0.1:8080`
+  - autostart active
+  - aligne sur la commande validee :
+    `llama-server -hf unsloth/Qwen3.6-27B-GGUF:BF16 --ctx-size 4096 -fit off --host 127.0.0.1 --port 8080`
+- `gemma4`
+  - source Hugging Face : `ggml-org/gemma-4-E2B-it-GGUF`
+  - bind `127.0.0.1:8081`
+  - autostart desactive, donc non accessible apres reboot tant qu'il n'est pas lance manuellement
+
+Le module cree aussi les repertoires persistants :
+
+- `/var/lib/llama-cpp/cache`
+- `/var/lib/llama-cpp/cache/huggingface`
+- `/var/lib/llama-cpp/cache/llama`
+- `/var/lib/llama-cpp/models`
+
+et utilise un user systeme dedie pour rendre les caches HF persistants et
+fiables entre redemarrages.
+
+Les services Hugging Face attendent aussi `network-online.target` et continuent
+de retenter le demarrage apres boot au lieu de rester bloques en echec si le
+reseau n'etait pas encore pret au premier lancement.
 
 Commandes utiles :
 
 ```bash
-systemctl status llama-cpp-server
-journalctl -u llama-cpp-server -f
+systemctl list-unit-files 'llama-cpp-*'
+systemctl status llama-cpp-qwen36-27b-bf16
+journalctl -u llama-cpp-qwen36-27b-bf16 -f
 curl http://127.0.0.1:8080/health
+sudo systemctl start llama-cpp-gemma4
+systemctl status llama-cpp-gemma4
+curl http://127.0.0.1:8081/health
 ```
-
-Pour changer de modele, modifier `llamaCppModel` dans
-`targets/hosts/ms-s1-max/config/capabilities.nix`.
 
 ## AnythingLLM
 

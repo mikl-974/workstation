@@ -1,8 +1,12 @@
-{ lib, pkgs, ... }:
+{ inputs, pkgs, ... }:
 let
-  llamaCppModel = "/var/lib/llama-cpp/models/qwen3.5-35b-a3b/Qwen_Qwen3.5-35B-A3B-Q4_K_M.gguf";
-  llamaCppHost = "127.0.0.1";
-  llamaCppPort = 8080;
+  llamaPkgs = import inputs.nixpkgs-llama {
+    system = pkgs.stdenv.hostPlatform.system;
+    config = {
+      allowUnfree = true;
+      rocmSupport = true;
+    };
+  };
 in
 {
   # Host-local capability map for `ms-s1-max`.
@@ -34,80 +38,52 @@ in
     MIOPEN_DEBUG_DISABLE_FIND_DB = "1";
   };
 
-  services.ollama = {
-    rocmOverrideGfx = "11.5.1";
-    environmentVariables = {
-      MIOPEN_DEBUG_DISABLE_FIND_DB = "1";
-    };
-  };
+  infra.ai.inference.llamaCpp = {
+    enable = true;
 
-  systemd.services.llama-cpp-server = {
-    description = "llama.cpp server";
-    wantedBy = [ "multi-user.target" ];
-    after = [ "network.target" ];
-    unitConfig.ConditionPathExists = llamaCppModel;
-    environment = {
-      HSA_OVERRIDE_GFX_VERSION = "11.5.1";
-      MIOPEN_DEBUG_DISABLE_FIND_DB = "1";
+    defaults = {
+      package = llamaPkgs.llama-cpp-rocm;
+      host = "127.0.0.1";
+      fit = "off";
+      ctxSize = 4096;
+      metrics = true;
+      enableUnifiedMemory = true;
+      openFirewall = false;
     };
-    serviceConfig = {
-      Type = "exec";
-      DynamicUser = true;
-      StateDirectory = "llama-cpp-server";
-      WorkingDirectory = "/var/lib/llama-cpp-server";
-      ExecStart = lib.concatStringsSep " " [
-        "${pkgs.llama-cpp-rocm}/bin/llama-server"
-        "--model"
-        (lib.escapeShellArg llamaCppModel)
-        "--host"
-        llamaCppHost
-        "--port"
-        (toString llamaCppPort)
-        "--ctx-size"
-        "16384"
-        "--n-gpu-layers"
-        "999"
-        "--flash-attn"
-        "auto"
-        "--metrics"
-      ];
-      Restart = "on-failure";
-      RestartSec = "5s";
-      DeviceAllow = [
-        "char-drm"
-        "char-fb"
-        "char-kfd"
-      ];
-      DevicePolicy = "closed";
-      NoNewPrivileges = true;
-      PrivateDevices = false;
-      PrivateTmp = true;
-      ProtectClock = true;
-      ProtectControlGroups = true;
-      ProtectHome = true;
-      ProtectHostname = true;
-      ProtectKernelLogs = true;
-      ProtectKernelModules = true;
-      ProtectKernelTunables = true;
-      ProtectProc = "invisible";
-      ProtectSystem = "strict";
-      ReadOnlyPaths = [ "/var/lib/llama-cpp/models" ];
-      RemoveIPC = true;
-      RestrictNamespaces = true;
-      RestrictRealtime = true;
-      RestrictSUIDSGID = true;
-      RestrictAddressFamilies = [
-        "AF_INET"
-        "AF_INET6"
-        "AF_UNIX"
-      ];
-      SupplementaryGroups = [ "render" ];
-      SystemCallArchitectures = "native";
-      SystemCallFilter = [
-        "@system-service @resources"
-        "~@privileged"
-      ];
-      UMask = "0077";
+
+    models = {
+      qwen36-27b-bf16 = {
+        enable = true;
+        autoStart = true;
+        description = "Qwen3.6 27B BF16 via llama.cpp";
+        source = "hf";
+        model = "unsloth/Qwen3.6-27B-GGUF:BF16";
+        port = 8080;
+        ctxSize = 4096;
+        fit = "off";
+        metrics = false;
+        enableUnifiedMemory = false;
+        extraArgs = [
+          "--no-mmap"
+          "--flash-attn"
+          "on"
+          "--batch-size"
+          "2048"
+          "--ubatch-size"
+          "2048"
+        ];
+      };
+
+      gemma4 = {
+        enable = true;
+        autoStart = false;
+        description = "Gemma 4 via llama.cpp";
+        source = "hf";
+        model = "ggml-org/gemma-4-E2B-it-GGUF";
+        port = 8081;
+        ctxSize = 8192;
+        extraArgs = [ ];
+      };
     };
   };
 

@@ -1,5 +1,5 @@
-{ pkgs }:
+{ pkgs, llamaCppPackage ? pkgs.llama-cpp }:
 with pkgs; [
-  llama-cpp-rocm
+  llamaCppPackage
   python3Packages.huggingface-hub
 ]

@@ -1,6 +1,6 @@
 { inputs, pkgs, ... }:
 let
-  llamaPkgs = import inputs.nixpkgs-llama {
+  llamaRocmPkgs = import inputs.nixpkgs-llama {
     system = pkgs.stdenv.hostPlatform.system;
     config = {
       allowUnfree = true;
@@ -42,7 +42,7 @@ in
     enable = true;
 
     defaults = {
-      package = llamaPkgs.llama-cpp-rocm;
+      package = llamaRocmPkgs.llama-cpp-rocm;
       host = "127.0.0.1";
       fit = "off";
       ctxSize = 4096;
@@ -52,13 +52,38 @@ in
     };
 
     models = {
-      qwen36-27b-bf16 = {
+      qwen36-35b-a3b-q8 = {
+        enable = true;
+        autoStart = false;
+        description = "Qwen3.6 35B A3B Q8_0 via llama.cpp";
+        source = "hf";
+        model = "unsloth/Qwen3.6-35B-A3B-GGUF:Q8_0";
+        port = 8080;
+        ctxSize = 4096;
+        fit = "off";
+        metrics = false;
+        enableUnifiedMemory = false;
+        extraArgs = [
+          "--no-mmap"
+          "--no-host"
+          "--flash-attn"
+          "on"
+          "--parallel"
+          "1"
+          "--batch-size"
+          "2048"
+          "--ubatch-size"
+          "2048"
+        ];
+      };
+
+      gemma4-31b-q8 = {
         enable = true;
         autoStart = true;
-        description = "Qwen3.6 27B BF16 via llama.cpp";
+        description = "Gemma 4 31B Q8_0 via llama.cpp";
         source = "hf";
-        model = "unsloth/Qwen3.6-27B-GGUF:BF16";
-        port = 8080;
+        model = "unsloth/gemma-4-31B-it-GGUF:Q8_0";
+        port = 8081;
         ctxSize = 4096;
         fit = "off";
         metrics = false;
@@ -67,6 +92,8 @@ in
           "--no-mmap"
           "--flash-attn"
           "on"
+          "--parallel"
+          "1"
           "--batch-size"
           "2048"
           "--ubatch-size"
@@ -74,15 +101,29 @@ in
         ];
       };
 
-      gemma4 = {
+      qwen3-coder-next-q8 = {
         enable = true;
-        autoStart = false;
-        description = "Gemma 4 via llama.cpp";
+        autoStart = true;
+        description = "Qwen3 Coder Next Q8_0 via llama.cpp";
         source = "hf";
-        model = "ggml-org/gemma-4-E2B-it-GGUF";
-        port = 8081;
-        ctxSize = 8192;
-        extraArgs = [ ];
+        model = "unsloth/Qwen3-Coder-Next-GGUF:Q8_0";
+        port = 8082;
+        ctxSize = 4096;
+        fit = "off";
+        metrics = false;
+        enableUnifiedMemory = false;
+        extraArgs = [
+          "--no-mmap"
+          "--no-host"
+          "--flash-attn"
+          "on"
+          "--parallel"
+          "1"
+          "--batch-size"
+          "2048"
+          "--ubatch-size"
+          "2048"
+        ];
       };
     };
   };

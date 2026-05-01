@@ -54,7 +54,7 @@ in
     models = {
       qwen36-35b-a3b-q8 = {
         enable = true;
-        autoStart = false;
+        autoStart = true;
         description = "Qwen3.6 35B A3B Q8_0 via llama.cpp";
         source = "hf";
         model = "unsloth/Qwen3.6-35B-A3B-GGUF:Q8_0";
@@ -79,7 +79,7 @@ in
 
       gemma4-31b-q6 = {
         enable = true;
-        autoStart = true;
+        autoStart = false;
         description = "Gemma 4 31B Q6_K via llama.cpp";
         source = "hf";
         model = "unsloth/gemma-4-31B-it-GGUF:Q6_K";
@@ -103,7 +103,7 @@ in
 
       qwen3-coder-next-q8 = {
         enable = true;
-        autoStart = true;
+        autoStart = false;
         description = "Qwen3 Coder Next Q8_0 via llama.cpp";
         source = "hf";
         model = "unsloth/Qwen3-Coder-Next-GGUF:Q8_0";

@@ -54,5 +54,33 @@
         "baseURL": "http://127.0.0.1:8082/v1"
       }
     }
+  },
+  "mcp": {
+    "aspire": {
+      "type": "local",
+      "command": [
+        "aspire",
+        "mcp",
+        "start"
+      ]
+    },
+    "playwright": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@playwright/mcp@latest"
+      ]
+    },
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "X-Context7-API-Key": "ctx7sk-a365b5c1-e84e-4c72-82b1-e13aa8233424",
+        "Accept": "application/json, text/event-stream"
+      },
+      "enabled": true
+    }
   }
+
 }

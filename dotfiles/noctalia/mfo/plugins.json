@@ -18,6 +18,10 @@
     "tailscale": {
       "enabled": true,
       "sourceUrl": "https://github.com/noctalia-dev/noctalia-plugins"
+    },
+    "air-quality": {
+      "enabled": true,
+      "sourceUrl": "https://github.com/noctalia-dev/noctalia-plugins"
     }
   },
   "version": 2

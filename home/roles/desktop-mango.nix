@@ -44,6 +44,11 @@
       # Cursor
       cursor_size=24
 
+      # Keyboard
+      xkb_rules_layout=us
+      xkb_rules_variant=altgr-intl
+      xkb_rules_options=lv3:ralt_switch
+
       # Window effects
       blur = 1
       blur_optimized = 1
@@ -66,39 +71,39 @@
       tagrule=id:5,layout_name:deck
       
       # Cycle through available layouts
-      bind=Alt,n,switch_layout
+      bind=SUPER,n,switch_layout
       
       # Tags
       bind=Ctrl,1,view,1,0
       bind=Ctrl,2,view,2,0
-      bind=Alt,1,tag,1,0
-      bind=Alt,2,tag,2,0
+      bind=SUPER,1,tag,1,0
+      bind=SUPER,2,tag,2,0
 
       # Window management
-      bind=Alt,r,reload_config
-      bind=Alt,Return,spawn,${pkgs.foot}/bin/foot
-      bind=Alt,space,spawn,noctalia-shell ipc call launcher toggle
-      bind=Alt,v,spawn,noctalia-shell ipc call launcher clipboard
+      bind=SUPER,r,reload_config
+      bind=SUPER,Return,spawn,${pkgs.foot}/bin/foot
+      bind=SUPER,space,spawn,noctalia-shell ipc call launcher toggle
+      bind=SUPER,v,spawn,noctalia-shell ipc call launcher clipboard
       bind=SUPER+SHIFT,S,spawn,noctalia-shell ipc call plugin:screen-shot-and-record screenshot
-      bind=Alt,c,spawn,noctalia-shell ipc call controlCenter toggle
-      bind=Alt,s,spawn,noctalia-shell ipc call sessionMenu toggle
-      bind=Alt,b,spawn,chromium
-      bind=Alt,e,spawn,thunar
-      bind=Alt,q,killclient,
-      #bind=Alt,m,quit
-      bind=Alt,h,focusdir,left
-      bind=Alt,l,focusdir,right
-      bind=Alt,k,focusdir,up
-      bind=Alt,j,focusdir,down
-      bind=ALT,Left,focusdir,left
-      bind=ALT,Right,focusdir,right
-      bind=ALT,Up,focusdir,up
-      bind=ALT,Down,focusdir,down
-      bind=ALT,f,togglefullscreen,
-      bind=ALT,backslash,togglefloating,
+      bind=SUPER,c,spawn,noctalia-shell ipc call controlCenter toggle
+      bind=SUPER,s,spawn,noctalia-shell ipc call sessionMenu toggle
+      bind=SUPER,b,spawn,chromium
+      bind=SUPER,e,spawn,thunar
+      bind=SUPER,q,killclient,
+      #bind=SUPER,m,quit
+      bind=SUPER,h,focusdir,left
+      bind=SUPER,l,focusdir,right
+      bind=SUPER,k,focusdir,up
+      bind=SUPER,j,focusdir,down
+      bind=SUPER,Left,focusdir,left
+      bind=SUPER,Right,focusdir,right
+      bind=SUPER,Up,focusdir,up
+      bind=SUPER,Down,focusdir,down
+      bind=SUPER,f,togglefullscreen,
+      bind=SUPER,backslash,togglefloating,
 
       # Shows/hides scratchpad
-      bind=ALT,z,toggle_scratchpad
+      bind=SUPER,z,toggle_scratchpad
 
       # Swap focused window with window in specified direction
       bind=SUPER+SHIFT,Up,exchange_client,up
@@ -107,17 +112,17 @@
       bind=SUPER+SHIFT,Right,exchange_client,right
 
       # Move focused window to master position
-      bind=ALT,m,zoom,
+      bind=SUPER,m,zoom,
 
       # Intelligently resize window avoiding collisions
       bind=SUPER+ALT,Left,smartresizewin,left
       bind=SUPER+ALT,Right,smartresizewin,right
       
       # Toggle overview mode
-      bind=ALT,Tab,toggleoverview,
+      bind=SUPER,Tab,toggleoverview,
 
-      mousebind=Alt,btn_left,moveresize,curmove
-      mousebind=Alt,btn_right,moveresize,curresize
+      mousebind=SUPER,btn_left,moveresize,curmove
+      mousebind=SUPER,btn_right,moveresize,curresize
 
       tagrule=id:1,layout_name:tile
       tagrule=id:2,layout_name:tile

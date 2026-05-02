@@ -28,41 +28,6 @@
     "widgets": {
       "left": [
         {
-          "colorizeSystemIcon": "none",
-          "colorizeSystemText": "none",
-          "customIconPath": "",
-          "enableColorization": false,
-          "icon": "rocket",
-          "iconColor": "none",
-          "id": "Launcher",
-          "useDistroLogo": false
-        }
-      ],
-      "center": [
-        {
-          "characterCount": 2,
-          "colorizeIcons": false,
-          "emptyColor": "secondary",
-          "enableScrollWheel": true,
-          "focusedColor": "primary",
-          "followFocusedScreen": false,
-          "fontWeight": "bold",
-          "groupedBorderOpacity": 1,
-          "hideUnoccupied": false,
-          "iconScale": 0.8,
-          "id": "Workspace",
-          "labelMode": "index",
-          "occupiedColor": "secondary",
-          "pillSize": 0.7,
-          "showApplications": false,
-          "showApplicationsHover": false,
-          "showBadge": true,
-          "showLabelsOnlyWhenOccupied": true,
-          "unfocusedIconsOpacity": 1
-        }
-      ],
-      "right": [
-        {
           "compactMode": true,
           "diskPath": "/",
           "iconColor": "none",
@@ -83,10 +48,77 @@
           "textColor": "none",
           "useMonospaceFont": true,
           "usePadding": false
+        }
+      ],
+      "center": [
+        {
+          "colorizeSystemIcon": "none",
+          "colorizeSystemText": "none",
+          "customIconPath": "",
+          "enableColorization": false,
+          "icon": "rocket",
+          "iconColor": "none",
+          "id": "Launcher",
+          "useDistroLogo": false
         },
         {
-          "id": "Spacer",
-          "width": 20
+          "characterCount": 2,
+          "colorizeIcons": false,
+          "emptyColor": "secondary",
+          "enableScrollWheel": true,
+          "focusedColor": "primary",
+          "followFocusedScreen": false,
+          "fontWeight": "bold",
+          "groupedBorderOpacity": 1,
+          "hideUnoccupied": false,
+          "iconScale": 0.8,
+          "id": "Workspace",
+          "labelMode": "index",
+          "occupiedColor": "secondary",
+          "pillSize": 0.7,
+          "showApplications": false,
+          "showApplicationsHover": false,
+          "showBadge": true,
+          "showLabelsOnlyWhenOccupied": true,
+          "unfocusedIconsOpacity": 1
+        },
+        {
+          "displayMode": "onhover",
+          "iconColor": "none",
+          "id": "Bluetooth",
+          "textColor": "none"
+        },
+        {
+          "displayMode": "onhover",
+          "iconColor": "none",
+          "id": "Network",
+          "textColor": "none"
+        },
+        {
+          "displayMode": "onhover",
+          "iconColor": "none",
+          "id": "Volume",
+          "middleClickCommand": "pwvucontrol || pavucontrol",
+          "textColor": "none"
+        },
+        {
+          "clockColor": "none",
+          "customFont": "",
+          "formatHorizontal": "HH:mm",
+          "formatVertical": "HH mm",
+          "id": "Clock",
+          "tooltipFormat": "HH:mm ddd, MMM dd",
+          "useCustomFont": false
+        },
+        {
+          "colorizeDistroLogo": false,
+          "colorizeSystemIcon": "primary",
+          "colorizeSystemText": "none",
+          "customIconPath": "",
+          "enableColorization": false,
+          "icon": "noctalia",
+          "id": "ControlCenter",
+          "useDistroLogo": false
         },
         {
           "defaultSettings": {
@@ -100,7 +132,9 @@
             "useNoctaliaLocation": true
           },
           "id": "plugin:air-quality"
-        },
+        }
+      ],
+      "right": [
         {
           "id": "Spacer",
           "width": 20
@@ -174,44 +208,6 @@
             "terminalCommand": ""
           },
           "id": "plugin:tailscale"
-        },
-        {
-          "displayMode": "onhover",
-          "iconColor": "none",
-          "id": "Bluetooth",
-          "textColor": "none"
-        },
-        {
-          "displayMode": "onhover",
-          "iconColor": "none",
-          "id": "Network",
-          "textColor": "none"
-        },
-        {
-          "displayMode": "onhover",
-          "iconColor": "none",
-          "id": "Volume",
-          "middleClickCommand": "pwvucontrol || pavucontrol",
-          "textColor": "none"
-        },
-        {
-          "clockColor": "none",
-          "customFont": "",
-          "formatHorizontal": "HH:mm",
-          "formatVertical": "HH mm",
-          "id": "Clock",
-          "tooltipFormat": "HH:mm ddd, MMM dd",
-          "useCustomFont": false
-        },
-        {
-          "colorizeDistroLogo": false,
-          "colorizeSystemIcon": "primary",
-          "colorizeSystemText": "none",
-          "customIconPath": "",
-          "enableColorization": false,
-          "icon": "noctalia",
-          "id": "ControlCenter",
-          "useDistroLogo": false
         }
       ]
     },

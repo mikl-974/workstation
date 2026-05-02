@@ -28,6 +28,11 @@
   infra.networking.tailscale.enable = true;
   infra.users.admin.enable = true;
 
-  # QWERTY console — useful for physical access and emergency recovery.
-  console.keyMap = "us";
+  # QWERTY keyboard with AltGr dead keys, mirrored to the TTY for local recovery.
+  console.useXkbConfig = true;
+  services.xserver.xkb = {
+    layout = "us";
+    variant = "altgr-intl";
+    options = "lv3:ralt_switch"; # Force le Alt droit à devenir AltGr
+  };
 }

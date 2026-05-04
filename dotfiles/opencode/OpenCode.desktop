@@ -1,0 +1,10 @@
+[Desktop Entry]
+Categories=
+Comment=The open source AI coding agent
+Exec=bash /home/mfo/.local/share/opencode/opencode-launcher.sh
+StartupWMClass=OpenCode
+Icon=OpenCode
+Name=OpenCode
+Terminal=false
+Type=Application
+MimeType=x-scheme-handler/opencode
